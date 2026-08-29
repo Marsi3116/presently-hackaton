@@ -44,3 +44,24 @@ export const listBySessionInternal = internalQuery({
       .collect();
   },
 });
+
+/**
+ * La escribe /api/llm, que atiende a Vapi y no tiene sesion de Clerk.
+ * Misma consideracion que reports.getJuryContext: el sessionId no es
+ * adivinable y no se exponen datos del usuario.
+ */
+export const addFromJury = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    role: v.union(v.literal("jury"), v.literal("user")),
+    text: v.string(),
+    timestamp: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (session === null) return null;
+    await ctx.db.insert("qaMessages", { ...args, createdAt: Date.now() });
+    return null;
+  },
+});

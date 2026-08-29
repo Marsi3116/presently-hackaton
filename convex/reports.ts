@@ -114,3 +114,62 @@ export const markFailed = internalMutation({
     return null;
   },
 });
+
+/**
+ * Contexto que /api/llm inyecta en cada turno del jurado.
+ *
+ * Sin auth a proposito: quien llama es Vapi, server-to-server, y no tiene
+ * sesion de Clerk. La proteccion es que el sessionId es un id de Convex de 32
+ * caracteres, no adivinable, y solo devuelve material de la presentacion, sin
+ * datos del usuario. Si esto pasa a produccion real, cambiar por un token
+ * firmado de corta vida en el metadata de la llamada.
+ */
+export const getJuryContext = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (session === null) return null;
+
+    const [report, qa, transcripts, chaosEvent] = await Promise.all([
+      ctx.db
+        .query("redTeamReports")
+        .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+        .first(),
+      ctx.db
+        .query("qaMessages")
+        .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+        .collect(),
+      ctx.db
+        .query("transcripts")
+        .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+        .collect(),
+      ctx.db
+        .query("chaosEvents")
+        .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+        .first(),
+    ]);
+
+    return {
+      scenario: session.scenario,
+      goal: session.goal,
+      duration: session.duration,
+      redTeam:
+        report === null
+          ? null
+          : {
+              readinessScore: report.readinessScore,
+              summary: report.summary,
+              weaknesses: report.weaknesses,
+              probableQuestions: report.probableQuestions,
+            },
+      transcript: transcripts
+        .sort((a, b) => a.startTimestamp - b.startTimestamp)
+        .map((t) => t.text)
+        .join(" "),
+      qa: qa
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .map((m) => ({ role: m.role, text: m.text })),
+      chaosActive: chaosEvent !== null && chaosEvent.userResponse === undefined,
+    };
+  },
+});
