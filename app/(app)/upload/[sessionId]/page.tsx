@@ -5,7 +5,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 export default async function UploadPage({ params }: PageProps<"/upload/[sessionId]">) {
   const { sessionId } = await params;
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-16 md:px-10">
+    <main className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-6 sm:py-16 md:px-10">
       <SectionHeader
         sec="SEC 02 · UPLOAD"
         title="Sube tu presentación"

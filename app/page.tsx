@@ -66,7 +66,7 @@ export default function LandingPage() {
 
       {/* ---------- hero ---------- */}
       <main className="relative z-10 flex-1">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 md:px-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:gap-12 sm:px-6 sm:py-16 md:px-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-24">
           {/* columna izquierda */}
           <div>
             <p className="label-sec">&#9656; SEC 00 &middot; BRIEFING</p>
@@ -104,7 +104,7 @@ export default function LandingPage() {
           <div className="corner-ticks relative border border-hairline bg-bg-elevated">
             <div className="border-t-[3px] border-t-crimson" aria-hidden />
 
-            <div className="flex items-start justify-between gap-4 border-b border-hairline px-6 py-5">
+            <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-5 sm:px-6">
               <div>
                 <p className="label-sec">REPORTE RED TEAM</p>
                 <p className="mt-1.5 font-mono text-[11px] tracking-[0.15em] text-ink-muted uppercase">
@@ -114,7 +114,11 @@ export default function LandingPage() {
               <div className="text-right">
                 <p
                   className="display font-bold text-crimson tabular-nums"
-                  style={{ fontSize: "2.75rem", lineHeight: 1, letterSpacing: "-0.03em" }}
+                  style={{
+                    fontSize: "clamp(2rem, 9vw, 2.75rem)",
+                    lineHeight: 1,
+                    letterSpacing: "-0.03em",
+                  }}
                 >
                   43
                 </p>
@@ -124,7 +128,7 @@ export default function LandingPage() {
 
             <ul className="divide-y divide-hairline">
               {HALLAZGOS.map((h) => (
-                <li key={h.slide} className="px-6 py-5">
+                <li key={h.slide} className="px-5 py-5 sm:px-6">
                   <div className="flex items-center gap-3">
                     <Badge variant={h.severidad}>{h.etiqueta}</Badge>
                     <span className="label-meta">{h.slide}</span>
@@ -142,7 +146,7 @@ export default function LandingPage() {
               ))}
             </ul>
 
-            <div className="border-t border-hairline bg-bg-input/40 px-6 py-5">
+            <div className="border-t border-hairline bg-bg-input/40 px-5 py-5 sm:px-6">
               <div className="flex items-center justify-between">
                 <p className="label-meta">PREGUNTA MÁS PROBABLE</p>
                 <p className="font-mono text-[11px] font-bold tracking-[0.1em] text-amber tabular-nums">

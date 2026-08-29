@@ -31,12 +31,16 @@ export function ReadinessScore({
   return (
     <section className="border border-hairline bg-bg-elevated">
       <div className="border-t-[3px] border-t-crimson" aria-hidden />
-      <div className="grid gap-8 p-6 md:grid-cols-[auto_1fr] md:gap-10 md:p-8">
+      <div className="grid gap-8 p-5 sm:p-6 md:grid-cols-[auto_1fr] md:gap-10 md:p-8">
         <div>
           <p className="label-meta">PRESENTATION READINESS</p>
           <p
             className={cn("display mt-2 font-bold tabular-nums", scoreColor(score))}
-            style={{ fontSize: "5.5rem", lineHeight: 0.85, letterSpacing: "-0.04em" }}
+            style={{
+              fontSize: "clamp(3.5rem, 14vw, 5.5rem)",
+              lineHeight: 0.85,
+              letterSpacing: "-0.04em",
+            }}
           >
             {score}
           </p>

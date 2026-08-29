@@ -44,6 +44,8 @@ export type ReportInput = {
   scenario: string;
   goal: string;
   duration: number;
+  /** Texto del material subido, para medir que tanto de eso llego a decirse. */
+  deckText?: string;
   redTeamReportJson: string;
   presentationTranscript: string;
   qaHistory: string;
@@ -63,12 +65,33 @@ export async function runFinalReport(input: ReportInput): Promise<FinalReport> {
     .replace("{chaosResponse}", input.chaosResponse || "(sin respuesta)");
 
   return await generateJson({
-    system: PROMPTS.finalReport.system,
-    prompt,
+    system: PROMPTS.finalReport.system + COBERTURA,
+    prompt: prompt + bloqueDeck(input.deckText),
     temperature: 0.4,
     maxOutputTokens: 4096,
     parse: (value) => reportSchema.parse(value),
   });
+}
+
+/**
+ * Instruccion extra: sin esto el reporte evalua solo lo que se dijo y nunca
+ * nota que media presentacion quedo sin exponer, que es un problema real en
+ * una defensa con tiempo limitado.
+ */
+const COBERTURA = `
+
+COBERTURA DEL MATERIAL:
+Ademas de evaluar lo que dijo, compara la TRANSCRIPCION contra el CONTENIDO
+DEL MATERIAL. Si el presentador omitio secciones importantes del material, o
+si lo que expuso no corresponde con lo que el material dice, marcalo
+explicitamente en keyMisses y en una recomendacion de prioridad alta,
+nombrando la slide o seccion que quedo sin cubrir.
+Si la transcripcion esta vacia o es muy corta, dilo en el summary en vez de
+inventar una evaluacion.`;
+
+function bloqueDeck(deckText: string | undefined): string {
+  if (deckText === undefined || deckText.trim().length === 0) return "";
+  return "\n\n--- CONTENIDO DEL MATERIAL SUBIDO ---\n" + deckText;
 }
 
 /** "03:17" -> 197 segundos. El schema de Convex guarda numeros. */

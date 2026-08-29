@@ -37,7 +37,7 @@ export const loadReportInput = internalQuery({
     const session = await ctx.db.get(args.sessionId);
     if (session === null) return null;
 
-    const [redTeam, chaosEvent, qa, transcripts] = await Promise.all([
+    const [redTeam, chaosEvent, qa, transcripts, upload] = await Promise.all([
       ctx.db
         .query("redTeamReports")
         .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
@@ -54,12 +54,19 @@ export const loadReportInput = internalQuery({
         .query("transcripts")
         .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
         .collect(),
+      ctx.db
+        .query("uploads")
+        .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+        .first(),
     ]);
 
     return {
       scenario: session.scenario,
       goal: session.goal,
       duration: session.duration,
+      // El contenido del deck, para contrastar lo que dice contra lo que el
+      // presentador efectivamente expuso.
+      deckText: (upload?.extractedText ?? "").slice(0, 12000),
       redTeamReportJson: redTeam === null ? "(sin red team)" : JSON.stringify(redTeam),
       presentationTranscript: transcripts
         .filter((t) => t.phase === "presentation")

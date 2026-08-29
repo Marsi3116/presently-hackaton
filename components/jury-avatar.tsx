@@ -28,7 +28,7 @@ export function JuryAvatar({
     <div className="flex flex-col items-center">
       <div
         className={cn(
-          "relative flex size-52 items-center justify-center border-2 transition-colors md:size-64",
+          "relative flex size-36 items-center justify-center border-2 transition-colors sm:size-52 md:size-64",
           e.ring
         )}
       >
@@ -41,7 +41,7 @@ export function JuryAvatar({
           )}
         />
         <span
-          className="display text-6xl font-bold text-ink-muted select-none md:text-7xl"
+          className="display text-4xl font-bold text-ink-muted select-none sm:text-6xl md:text-7xl"
           aria-hidden
         >
           {name.slice(0, 1)}

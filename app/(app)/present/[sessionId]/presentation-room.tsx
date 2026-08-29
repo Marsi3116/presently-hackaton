@@ -51,7 +51,6 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const generateReport = useAction(api.actions.generateReport);
   const setStatus = useMutation(api.sessions.setStatus);
   const addTranscript = useMutation(api.transcripts.add);
-  const addQa = useMutation(api.qa.add);
   const submitChaos = useMutation(api.chaos.submitResponse);
 
   const [modo, setModo] = useState<Modo>("voz");
@@ -66,6 +65,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
 
   const vapiRef = useRef<{ stop: () => void; setMuted: (m: boolean) => void } | null>(null);
   const chaosDisparado = useRef(false);
+  const chaosMostrado = useRef(false);
   const inicioRef = useRef<number>(0);
   const chaosInicioRef = useRef<number>(0);
 
@@ -97,13 +97,18 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     });
   }, [fase, preguntasDelJurado, sessionId, triggerChaos]);
 
+  // El registro del chaos queda en la base para siempre, asi que sin este
+  // guard el overlay se reabria apenas la fase volvia a "en_vivo": se cerraba
+  // a los 30 segundos y aparecia de nuevo, en loop.
   useEffect(() => {
-    if (chaos !== null && chaos !== undefined && fase === "en_vivo") {
-      chaosInicioRef.current = Date.now();
-      setFase("chaos");
-      void setStatus({ sessionId, status: "chaos" }).catch(() => {});
-      vapiRef.current?.setMuted(true);
-    }
+    if (chaosMostrado.current) return;
+    if (chaos === null || chaos === undefined) return;
+    if (fase !== "en_vivo") return;
+    chaosMostrado.current = true;
+    chaosInicioRef.current = Date.now();
+    setFase("chaos");
+    void setStatus({ sessionId, status: "chaos" }).catch(() => {});
+    vapiRef.current?.setMuted(true);
   }, [chaos, fase, sessionId, setStatus]);
 
   // ---- arranque comun a los dos modos ----
@@ -192,7 +197,8 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     setJuryState("thinking");
 
     const t = ahora();
-    await addQa({ sessionId, role: "user", text: texto, timestamp: t }).catch(() => {});
+    // El mensaje del usuario lo guarda /api/llm, que es el unico escritor de
+    // qaMessages. Guardarlo tambien aca lo duplicaba en la transcripcion.
     await addTranscript({
       sessionId,
       text: texto,
@@ -253,28 +259,35 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     } finally {
       setPensando(false);
     }
-  }, [escrito, pensando, ahora, addQa, addTranscript, sessionId, mensajes]);
+  }, [escrito, pensando, ahora, addTranscript, sessionId, mensajes]);
 
-  const cerrarChaos = useCallback(() => {
-    const dur = Math.max(
-      1,
-      Math.round((Date.now() - chaosInicioRef.current) / 1000)
-    );
-    // Lo que dijo durante los 30 segundos del overlay.
-    const respuesta = mensajes
-      .filter((m) => m.role === "user")
-      .slice(-2)
-      .map((m) => m.text)
-      .join(" ");
-    void submitChaos({
-      sessionId,
-      userResponse: respuesta.length > 0 ? respuesta : "(sin respuesta registrada)",
-      responseDurationSec: dur,
-    }).catch(() => {});
-    setFase("en_vivo");
-    void setStatus({ sessionId, status: "qa" }).catch(() => {});
-    vapiRef.current?.setMuted(false);
-  }, [mensajes, sessionId, submitChaos, setStatus]);
+  const cerrarChaos = useCallback(
+    (respuestaEscrita?: string) => {
+      const dur = Math.max(
+        1,
+        Math.round((Date.now() - chaosInicioRef.current) / 1000)
+      );
+      // Todo lo que dijo mientras el overlay estuvo arriba. En voz llega por
+      // transcripts; en texto lo escribe en el propio overlay.
+      const hablado = mensajes
+        .filter((m) => m.role === "user" && m.createdAt >= chaosInicioRef.current)
+        .map((m) => m.text)
+        .join(" ")
+        .trim();
+      const respuesta = (respuestaEscrita ?? "").trim() || hablado;
+
+      void submitChaos({
+        sessionId,
+        userResponse:
+          respuesta.length > 0 ? respuesta : "(no respondio al chaos event)",
+        responseDurationSec: dur,
+      }).catch(() => {});
+      setFase("en_vivo");
+      void setStatus({ sessionId, status: "qa" }).catch(() => {});
+      vapiRef.current?.setMuted(false);
+    },
+    [mensajes, sessionId, submitChaos, setStatus]
+  );
 
   const terminar = useCallback(async () => {
     vapiRef.current?.stop();
@@ -302,6 +315,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
           body={chaos.body}
           callToAction={chaos.callToAction}
           seconds={CHAOS_SEGUNDOS}
+          modoTexto={modo === "texto"}
           onDone={cerrarChaos}
         />
       )}
@@ -334,12 +348,12 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
         />
       )}
 
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline px-6 py-4 md:px-10">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hairline px-5 py-3.5 sm:px-6 sm:py-4 md:px-10">
         <div className="flex items-center gap-4">
           <span className="label-sec">&#9656; SEC 04 &middot; EN VIVO</span>
           <span className="label-meta hidden sm:inline">{scenario.toUpperCase()}</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           {!enCurso && (
             <div className="flex border border-hairline-strong">
               {(["voz", "texto"] as const).map((m) => (
@@ -370,8 +384,8 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
         </div>
       </header>
 
-      <div className="grid flex-1 lg:grid-cols-[1fr_auto]">
-        <section className="flex flex-col border-hairline p-6 md:p-10 lg:border-r">
+      <div className="flex flex-1 flex-col-reverse lg:grid lg:grid-cols-[1fr_auto]">
+        <section className="flex flex-col border-hairline p-5 sm:p-6 md:p-10 lg:border-r">
           <h2 className="label-meta">TRANSCRIPCION</h2>
           <ul className="mt-6 flex-1 space-y-5">
             {mensajes.map((m) => (
@@ -406,7 +420,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
 
           {modo === "texto" && enCurso && (
             <form
-              className="mt-8 flex gap-3 border-t border-hairline pt-6"
+              className="mt-8 flex flex-col gap-3 border-t border-hairline pt-6 sm:flex-row"
               onSubmit={(e) => {
                 e.preventDefault();
                 void enviarTexto();
@@ -426,7 +440,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
           )}
         </section>
 
-        <aside className="flex flex-col items-center justify-center gap-8 border-t border-hairline p-8 lg:w-[26rem] lg:border-t-0">
+        <aside className="flex flex-col items-center justify-center gap-6 border-b border-hairline p-6 sm:gap-8 sm:p-8 lg:w-[26rem] lg:border-b-0 lg:border-t-0">
           <JuryAvatar
             state={juryState}
             name={jurado.name}

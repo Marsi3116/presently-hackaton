@@ -7,7 +7,7 @@ export default async function RedTeamPage({
 }: PageProps<"/red-team/[sessionId]">) {
   const { sessionId } = await params;
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-16 md:px-10">
+    <main className="mx-auto w-full max-w-4xl px-5 py-10 sm:px-6 sm:py-16 md:px-10">
       <SectionHeader
         sec="SEC 03 · RED TEAM"
         title="Lo que te van a atacar"
