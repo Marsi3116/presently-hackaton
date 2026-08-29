@@ -11,7 +11,8 @@
     "prompts": "node scripts/build-prompts.mjs",
     "predev": "node scripts/build-prompts.mjs",
     "prebuild": "node scripts/build-prompts.mjs",
-    "build:vercel": "npm run prompts && convex deploy --cmd \"next build\""
+    "build:vercel": "npm run prompts && convex deploy --cmd \"next build\"",
+    "samples": "node scripts/make-samples.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.114",

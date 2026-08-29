@@ -59,17 +59,42 @@ async function fromOffice(buffer: Buffer): Promise<Extraction> {
 
 /** Colapsa el ruido de layout que dejan los extractores. */
 function normalize(text: string): string {
-  return (
-    text
-      .replace(/\r\n?/g, "\n")
-      .replace(/[ \t]+/g, " ")
-      // pdf-parse separa paginas con "-- 1 of 8 --". Lo reescribimos a un
-      // marcador explicito: el Red Team tiene que citar "Pagina 4", y sin esta
-      // senal el LLM inventa los numeros.
-      .replace(/^[ \t]*--[ \t]*(\d+)[ \t]+of[ \t]+\d+[ \t]*--[ \t]*$/gim, "\n[Pagina $1]\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim()
-  );
+  const limpio = text.replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ");
+  return collapse(markPages(limpio));
+}
+
+const PAGE_BREAK = /^[ \t]*--[ \t]*(\d+)[ \t]+of[ \t]+\d+[ \t]*--[ \t]*$/gim;
+
+/**
+ * pdf-parse cierra cada pagina con "-- 1 of 8 --", es decir DESPUES de su
+ * contenido. Dejar el marcador ahi hacia que el modelo atribuyera cada bloque
+ * al marcador anterior y citara siempre una pagina de menos: el claim de la
+ * pagina 4 salia reportado como "Pagina 3".
+ *
+ * Se reordena para que el marcador ENCABECE el contenido que nombra.
+ */
+function markPages(text: string): string {
+  const partes: string[] = [];
+  let ultimo = 0;
+  let hallado = false;
+
+  for (const m of text.matchAll(PAGE_BREAK)) {
+    hallado = true;
+    const contenido = text.slice(ultimo, m.index).trim();
+    if (contenido.length > 0) partes.push(`[Pagina ${m[1]}]\n${contenido}`);
+    ultimo = m.index + m[0].length;
+  }
+  if (!hallado) return text;
+
+  // Cola sin marcador: pdf-parse a veces omite el ultimo salto.
+  const resto = text.slice(ultimo).trim();
+  if (resto.length > 0) partes.push(`[Pagina ${partes.length + 1}]\n${resto}`);
+
+  return partes.join("\n\n");
+}
+
+function collapse(text: string): string {
+  return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** Fallback cuando el formato no reporta paginas. Solo sirve para citar. */
