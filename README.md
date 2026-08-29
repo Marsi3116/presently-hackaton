@@ -141,6 +141,7 @@ El sistema completo está en [`docs/03-design-system.md`](docs/03-design-system.
 | [`docs/04-architecture.md`](docs/04-architecture.md) | Arquitectura y flujo de datos |
 | [`docs/05-tools-and-credits.md`](docs/05-tools-and-credits.md) | APIs, autenticación, cuotas |
 | [`docs/06-pitch.md`](docs/06-pitch.md) | El pitch |
+| [`docs/07-manual-de-usuario.md`](docs/07-manual-de-usuario.md) | Manual de usuario: el recorrido completo y qué hacer en cada pantalla |
 
 ## Notas
 
