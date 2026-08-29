@@ -87,3 +87,30 @@ export const getBySessionInternal = internalMutation({
       .first();
   },
 });
+
+/**
+ * URL de descarga de un blob ya subido.
+ *
+ * La usa /api/analyze: el navegador sube el archivo DIRECTO a Convex y el
+ * servidor lo baja de aca. Asi el archivo nunca pasa por el body de la
+ * funcion de Vercel, que corta en 4.5 MB.
+ */
+export const getStorageUrl = query({
+  args: { storageId: v.id("_storage") },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    await requireUserId(ctx.auth);
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+/** Limpia un blob huerfano cuando la extraccion falla. */
+export const discard = mutation({
+  args: { storageId: v.id("_storage") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireUserId(ctx.auth);
+    await ctx.storage.delete(args.storageId);
+    return null;
+  },
+});

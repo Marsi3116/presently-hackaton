@@ -5,13 +5,47 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { extractText, isSupported } from "@/lib/parse-ppt";
 import { extractRubric, isSupportedRubric } from "@/lib/parse-rubric";
 
-// El archivo pasa por aca en vez de ir directo del navegador a Convex porque
-// la extraccion de texto necesita el runtime de Node (pdfjs). Una sola ida y
-// vuelta: extrae, sube a storage y guarda la fila.
+// El navegador sube los archivos DIRECTO a Convex Storage y aca solo llegan
+// los storageId. El archivo nunca pasa por el body de esta funcion: Vercel lo
+// corta en 4.5 MB y un PPT con imagenes pasa eso facil (el de prueba pesaba
+// 14 MB). El servidor los baja de Convex, que no tiene ese limite.
+//
+// La extraccion sigue del lado del servidor porque pdfjs necesita el runtime
+// de Node, que el navegador no tiene.
 
 export const maxDuration = 60;
 
-const MAX_BYTES = 20 * 1024 * 1024;
+type Entrada = {
+  sessionId?: unknown;
+  deck?: unknown;
+  rubric?: unknown;
+};
+
+type Archivo = {
+  storageId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
+function leerArchivo(valor: unknown): Archivo | null {
+  if (typeof valor !== "object" || valor === null) return null;
+  const v = valor as Record<string, unknown>;
+  if (
+    typeof v.storageId !== "string" ||
+    typeof v.filename !== "string" ||
+    typeof v.mimeType !== "string" ||
+    typeof v.sizeBytes !== "number"
+  ) {
+    return null;
+  }
+  return {
+    storageId: v.storageId,
+    filename: v.filename,
+    mimeType: v.mimeType,
+    sizeBytes: v.sizeBytes,
+  };
+}
 
 export async function POST(req: Request) {
   const { getToken } = await auth();
@@ -21,26 +55,18 @@ export async function POST(req: Request) {
     return Response.json({ error: "No autenticado." }, { status: 401 });
   }
 
-  const form = await req.formData();
-  const sessionId = form.get("sessionId");
-  const file = form.get("file");
+  const body: unknown = await req.json();
+  const entrada = (body ?? {}) as Entrada;
+  const sessionId = entrada.sessionId;
+  const deck = leerArchivo(entrada.deck);
 
-  if (typeof sessionId !== "string" || !(file instanceof File)) {
+  if (typeof sessionId !== "string" || deck === null) {
     return Response.json(
-      { error: "Faltan sessionId o file." },
+      { error: "Faltan sessionId o los datos del archivo." },
       { status: 400 }
     );
   }
-  if (file.size === 0) {
-    return Response.json({ error: "El archivo esta vacio." }, { status: 400 });
-  }
-  if (file.size > MAX_BYTES) {
-    return Response.json(
-      { error: `El archivo supera los 20 MB (${(file.size / 1048576).toFixed(1)} MB).` },
-      { status: 400 }
-    );
-  }
-  if (!isSupported(file.type, file.name)) {
+  if (!isSupported(deck.mimeType, deck.filename)) {
     return Response.json(
       { error: "Formato no soportado. Sube un PDF, PPTX o DOCX." },
       { status: 400 }
@@ -50,12 +76,29 @@ export async function POST(req: Request) {
   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
   convex.setAuth(token);
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const descartar = (storageId: string) =>
+    convex
+      .mutation(api.uploads.discard, { storageId: storageId as Id<"_storage"> })
+      .catch(() => {});
+
+  let buffer: Buffer;
+  try {
+    buffer = await bajar(convex, deck.storageId);
+  } catch (error) {
+    return Response.json(
+      {
+        error: "No se pudo recuperar el archivo subido.",
+        detail: error instanceof Error ? error.message : String(error),
+      },
+      { status: 502 }
+    );
+  }
 
   let extraction;
   try {
-    extraction = await extractText(buffer, file.type, file.name);
+    extraction = await extractText(buffer, deck.mimeType, deck.filename);
   } catch (error) {
+    await descartar(deck.storageId);
     return Response.json(
       {
         error: "No se pudo leer el archivo.",
@@ -66,61 +109,34 @@ export async function POST(req: Request) {
   }
 
   if (extraction.text.trim().length < 40) {
+    await descartar(deck.storageId);
     return Response.json(
       {
         error:
-          "El archivo no tiene texto legible. Si es un PDF escaneado, exportalo con texto seleccionable.",
+          "El archivo no tiene texto legible. Si las slides son imagenes o el PDF es un escaneo, exportalo con texto seleccionable.",
       },
       { status: 422 }
     );
   }
 
-  // Guardar el original: el After Action Report lo referencia.
-  const uploadUrl = await convex.mutation(api.uploads.generateUploadUrl, {});
-  const stored = await fetch(uploadUrl, {
-    method: "POST",
-    headers: { "Content-Type": file.type || "application/octet-stream" },
-    body: new Uint8Array(buffer),
-  });
-  if (!stored.ok) {
-    return Response.json(
-      { error: `Convex storage rechazo el archivo (HTTP ${stored.status}).` },
-      { status: 502 }
-    );
-  }
-  const { storageId } = (await stored.json()) as { storageId: string };
-
-  // La rubrica es opcional. Se procesa ANTES del deck porque uploads.save
-  // agenda el Red Team, y el analisis tiene que encontrarla ya guardada.
-  const rubricFile = form.get("rubric");
+  // La rubrica es opcional y se procesa ANTES del deck, porque uploads.save
+  // agenda el Red Team y el analisis tiene que encontrarla ya guardada.
+  const rubric = leerArchivo(entrada.rubric);
   let rubricStatus: string | null = null;
-  if (rubricFile instanceof File && rubricFile.size > 0) {
-    if (rubricFile.size > MAX_BYTES) {
-      rubricStatus = "La rubrica supera los 20 MB; se ignoro.";
-    } else if (!isSupportedRubric(rubricFile.type, rubricFile.name)) {
+  if (rubric !== null) {
+    if (!isSupportedRubric(rubric.mimeType, rubric.filename)) {
       rubricStatus = "Formato de rubrica no soportado; se ignoro.";
+      await descartar(rubric.storageId);
     } else {
       try {
-        const rBuf = Buffer.from(await rubricFile.arrayBuffer());
-        const parsed = await extractRubric(rBuf, rubricFile.type, rubricFile.name);
-        const rUrl = await convex.mutation(api.uploads.generateUploadUrl, {});
-        const rStored = await fetch(rUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": rubricFile.type || "application/octet-stream",
-          },
-          body: new Uint8Array(rBuf),
-        });
-        if (!rStored.ok) throw new Error(`storage HTTP ${rStored.status}`);
-        const { storageId: rStorageId } = (await rStored.json()) as {
-          storageId: string;
-        };
+        const rBuf = await bajar(convex, rubric.storageId);
+        const parsed = await extractRubric(rBuf, rubric.mimeType, rubric.filename);
         await convex.mutation(api.rubrics.save, {
           sessionId: sessionId as Id<"sessions">,
-          storageId: rStorageId as Id<"_storage">,
-          filename: rubricFile.name,
-          mimeType: rubricFile.type || "application/octet-stream",
-          sizeBytes: rubricFile.size,
+          storageId: rubric.storageId as Id<"_storage">,
+          filename: rubric.filename,
+          mimeType: rubric.mimeType,
+          sizeBytes: rubric.sizeBytes,
           extractedText: parsed.text,
           source: parsed.source,
         });
@@ -128,6 +144,7 @@ export async function POST(req: Request) {
         // La rubrica es opcional: si falla, el analisis sigue sin ella.
         rubricStatus =
           error instanceof Error ? error.message : "No se pudo leer la rubrica.";
+        await descartar(rubric.storageId);
       }
     }
   }
@@ -135,10 +152,10 @@ export async function POST(req: Request) {
   // Esta mutation agenda el Red Team.
   await convex.mutation(api.uploads.save, {
     sessionId: sessionId as Id<"sessions">,
-    storageId: storageId as Id<"_storage">,
-    filename: file.name,
-    mimeType: file.type || "application/octet-stream",
-    sizeBytes: file.size,
+    storageId: deck.storageId as Id<"_storage">,
+    filename: deck.filename,
+    mimeType: deck.mimeType,
+    sizeBytes: deck.sizeBytes,
     extractedText: extraction.text,
     slideCount: extraction.unitCount ?? undefined,
   });
@@ -149,4 +166,14 @@ export async function POST(req: Request) {
     unitCount: extraction.unitCount,
     rubricStatus,
   });
+}
+
+async function bajar(convex: ConvexHttpClient, storageId: string): Promise<Buffer> {
+  const url = await convex.query(api.uploads.getStorageUrl, {
+    storageId: storageId as Id<"_storage">,
+  });
+  if (url === null) throw new Error("El archivo no existe en storage.");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Storage devolvio HTTP ${res.status}.`);
+  return Buffer.from(await res.arrayBuffer());
 }

@@ -57,3 +57,6 @@ PROMPTING_CHEATSHEET.md
 
 # generado desde prompts/*.md por scripts/build-prompts.mjs
 lib/prompts.generated.ts
+
+# Pitch real del equipo: no va al repo publico
+samples/Presently-*.pptx

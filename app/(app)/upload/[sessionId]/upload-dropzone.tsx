@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,11 @@ import { cn } from "@/lib/utils";
 
 const ACEPTA_DECK = ".pdf,.pptx,.ppt,.docx,.doc,.odp";
 const ACEPTA_RUBRICA = ".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp";
+const MAX_BYTES = 50 * 1024 * 1024;
 
 type Estado =
   | { fase: "vacio" }
-  | { fase: "subiendo"; nombre: string }
+  | { fase: "subiendo"; nombre: string; detalle: string }
   | { fase: "analizando"; nombre: string; aviso: string | null }
   | { fase: "error"; mensaje: string };
 
@@ -24,6 +25,8 @@ export function UploadDropzone({ sessionId }: { sessionId: Id<"sessions"> }) {
   const [estado, setEstado] = useState<Estado>({ fase: "vacio" });
   const [arrastrando, setArrastrando] = useState(false);
   const [rubrica, setRubrica] = useState<File | null>(null);
+
+  const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
 
   // Reactivo: el Red Team corre en background y cambia el status a "ready".
   const session = useQuery(api.sessions.get, { sessionId });
@@ -38,19 +41,64 @@ export function UploadDropzone({ sessionId }: { sessionId: Id<"sessions"> }) {
     }
   }, [listo, estado.fase, router, sessionId]);
 
+  /** Sube un archivo DIRECTO a Convex y devuelve su storageId. */
+  async function aStorage(file: File) {
+    const url = await generateUploadUrl();
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (!res.ok) throw new Error(`Convex Storage devolvio HTTP ${res.status}.`);
+    const { storageId } = (await res.json()) as { storageId: string };
+    return {
+      storageId,
+      filename: file.name,
+      mimeType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
+    };
+  }
+
   async function subir(file: File) {
-    setEstado({ fase: "subiendo", nombre: file.name });
-    const body = new FormData();
-    body.append("sessionId", sessionId);
-    body.append("file", file);
-    if (rubrica !== null) body.append("rubric", rubrica);
+    if (file.size === 0) {
+      setEstado({ fase: "error", mensaje: "El archivo esta vacio." });
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setEstado({
+        fase: "error",
+        mensaje: `El archivo pesa ${(file.size / 1048576).toFixed(1)} MB y el maximo son 50 MB.`,
+      });
+      return;
+    }
+
     try {
-      const res = await fetch("/api/analyze", { method: "POST", body });
-      const data = (await res.json()) as { error?: string; rubricStatus?: string | null };
+      // El archivo va del navegador a Convex sin pasar por Vercel, que corta
+      // los bodies en 4.5 MB. Un PPT con imagenes pasa eso facil.
+      setEstado({ fase: "subiendo", nombre: file.name, detalle: "SUBIENDO ARCHIVO" });
+      const deck = await aStorage(file);
+
+      let rubricaSubida = null;
+      if (rubrica !== null) {
+        setEstado({ fase: "subiendo", nombre: file.name, detalle: "SUBIENDO RUBRICA" });
+        rubricaSubida = await aStorage(rubrica);
+      }
+
+      setEstado({ fase: "subiendo", nombre: file.name, detalle: "EXTRAYENDO TEXTO" });
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, deck, rubric: rubricaSubida }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        detail?: string;
+        rubricStatus?: string | null;
+      };
       if (!res.ok) {
         setEstado({
           fase: "error",
-          mensaje: data.error ?? `Fallo la subida (HTTP ${res.status}).`,
+          mensaje: data.error ?? `Fallo el analisis (HTTP ${res.status}).`,
         });
         return;
       }
@@ -59,8 +107,11 @@ export function UploadDropzone({ sessionId }: { sessionId: Id<"sessions"> }) {
         nombre: file.name,
         aviso: data.rubricStatus ?? null,
       });
-    } catch {
-      setEstado({ fase: "error", mensaje: "No se pudo contactar al servidor." });
+    } catch (e) {
+      setEstado({
+        fase: "error",
+        mensaje: e instanceof Error ? e.message : "No se pudo subir el archivo.",
+      });
     }
   }
 
@@ -109,14 +160,14 @@ export function UploadDropzone({ sessionId }: { sessionId: Id<"sessions"> }) {
               Elegir archivo
             </Button>
             <p className="mt-6 font-mono text-[11px] tracking-[0.15em] text-ink-muted uppercase">
-              PDF &middot; PPTX &middot; DOCX &middot; MAX 20 MB
+              PDF &middot; PPTX &middot; DOCX &middot; MAX 50 MB
             </p>
           </>
         )}
 
         {estado.fase === "subiendo" && (
           <>
-            <p className="label-sec">&#9656; EXTRAYENDO TEXTO</p>
+            <p className="label-sec">&#9656; {estado.detalle}</p>
             <p className="mt-3 font-mono text-[13px] text-ink-soft">{estado.nombre}</p>
           </>
         )}
@@ -141,7 +192,7 @@ export function UploadDropzone({ sessionId }: { sessionId: Id<"sessions"> }) {
         {(estado.fase === "error" || falloAnalisis) && (
           <>
             <p className="label-sec">&#9656; FALLO</p>
-            <p className="mt-3 text-[15px] text-ink">
+            <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-ink">
               {estado.fase === "error"
                 ? estado.mensaje
                 : "El analisis no pudo completarse. Revisa el archivo e intenta de nuevo."}
