@@ -26,6 +26,7 @@ export const analyze = internalAction({
         goal: input.goal,
         duration: input.duration,
         extractedText: input.extractedText,
+        rubric: input.rubric,
       });
 
       await ctx.runMutation(internal.reports.saveRedTeamReport, {

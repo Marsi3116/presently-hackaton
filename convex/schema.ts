@@ -59,6 +59,25 @@ export default defineSchema({
     .index("by_session", ["sessionId"]),
 
   // ============================================================
+  // RUBRICS
+  // Criterio de evaluacion opcional que sube el usuario: la rubrica del
+  // profesor, las bases del hackathon, o una foto de la pizarra. Cuando
+  // existe, el Red Team y el jurado evaluan CONTRA esto y no contra
+  // criterios genericos.
+  // ============================================================
+  rubrics: defineTable({
+    sessionId: v.id("sessions"),
+    storageId: v.id("_storage"),
+    filename: v.string(),
+    mimeType: v.string(),
+    sizeBytes: v.number(),
+    // De una imagen sale por vision; de un PDF/DOCX por extraccion de texto.
+    extractedText: v.string(),
+    source: v.union(v.literal("image"), v.literal("document")),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"]),
+
+  // ============================================================
   // RED TEAM REPORTS
   // Resultado del análisis inicial del contenido.
   // ============================================================

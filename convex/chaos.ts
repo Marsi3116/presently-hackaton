@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, internalQuery, internalMutation } from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { requireUserId } from "./lib/auth";
 
 export const getBySession = query({
@@ -68,6 +68,33 @@ export const recordResponse = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const event = await ctx.db
+      .query("chaosEvents")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+    if (event === null) return null;
+    await ctx.db.patch(event._id, {
+      userResponse: args.userResponse,
+      responseDurationSec: args.responseDurationSec,
+    });
+    return null;
+  },
+});
+
+/** La llama /present cuando el usuario termina de responder al Chaos Event. */
+export const submitResponse = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userResponse: v.string(),
+    responseDurationSec: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx.auth);
+    const session = await ctx.db.get(args.sessionId);
+    if (session === null || session.userId !== userId) {
+      throw new Error("Sesion no encontrada.");
+    }
     const event = await ctx.db
       .query("chaosEvents")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))

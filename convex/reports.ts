@@ -26,12 +26,17 @@ export const loadAnalysisInput = internalQuery({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .first();
     if (upload === null) return null;
+    const rubric = await ctx.db
+      .query("rubrics")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .first();
     return {
       scenario: session.scenario,
       goal: session.goal,
       duration: session.duration,
       extractedText: upload.extractedText ?? "",
       uploadId: upload._id,
+      rubric: rubric?.extractedText,
     };
   },
 });
@@ -130,7 +135,7 @@ export const getJuryContext = query({
     const session = await ctx.db.get(args.sessionId);
     if (session === null) return null;
 
-    const [report, qa, transcripts, chaosEvent] = await Promise.all([
+    const [report, qa, transcripts, chaosEvent, rubric] = await Promise.all([
       ctx.db
         .query("redTeamReports")
         .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
@@ -147,9 +152,14 @@ export const getJuryContext = query({
         .query("chaosEvents")
         .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
         .first(),
+      ctx.db
+        .query("rubrics")
+        .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+        .first(),
     ]);
 
     return {
+      rubric: rubric?.extractedText ?? null,
       scenario: session.scenario,
       goal: session.goal,
       duration: session.duration,

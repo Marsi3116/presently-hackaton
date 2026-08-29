@@ -15,7 +15,9 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as qa from "../qa.js";
 import type * as redTeam from "../redTeam.js";
 import type * as reports from "../reports.js";
+import type * as rubrics from "../rubrics.js";
 import type * as sessions from "../sessions.js";
+import type * as transcripts from "../transcripts.js";
 import type * as uploads from "../uploads.js";
 
 import type {
@@ -32,7 +34,9 @@ declare const fullApi: ApiFromModules<{
   qa: typeof qa;
   redTeam: typeof redTeam;
   reports: typeof reports;
+  rubrics: typeof rubrics;
   sessions: typeof sessions;
+  transcripts: typeof transcripts;
   uploads: typeof uploads;
 }>;
 

@@ -56,11 +56,24 @@ export type RedTeamInput = {
   goal: string;
   duration: number;
   extractedText: string;
+  /** Criterio de evaluacion que subio el usuario, si lo subio. */
+  rubric?: string;
 };
 
 /** Rellena el template de prompts/red-team.md con los datos de la sesion. */
 export function buildUserPrompt(input: RedTeamInput): string {
-  return PROMPTS.redTeam.userTemplate
+  // La rubrica manda sobre los criterios genericos del prompt: si el usuario
+  // sabe con que lo van a calificar, evaluar con otra cosa es ruido.
+  const rubrica =
+    input.rubric !== undefined && input.rubric.trim().length > 0
+      ? "--- RUBRICA DE EVALUACION (provista por el usuario) ---\n" +
+        input.rubric.trim() +
+        "\n\nEvalua PRIORITARIAMENTE contra esta rubrica. Cuando una debilidad " +
+        "incumpla un criterio de la rubrica, dilo explicitamente y nombra el " +
+        "criterio. Los criterios genericos de tu system prompt son secundarios.\n\n"
+      : "";
+
+  return rubrica + PROMPTS.redTeam.userTemplate
     .replace("{scenario}", input.scenario)
     .replace("{goal}", input.goal || "(no especificado)")
     .replace("{duration}", String(input.duration))

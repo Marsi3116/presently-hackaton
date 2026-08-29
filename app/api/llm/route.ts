@@ -3,6 +3,7 @@ import { streamText } from "ai";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { getModel } from "@/lib/llm";
+import { PROMPTS } from "@/lib/prompts.generated";
 
 // Endpoint "custom LLM" que consume Vapi. Vapi habla el formato de
 // chat/completions de OpenAI, asi que la request entra y la respuesta sale en
@@ -43,10 +44,16 @@ export async function POST(req: Request) {
     else if (m.role === "user") turnos.push({ role: "user", content: text });
   }
 
-  if (sessionId !== null) {
-    const contexto = await loadContext(sessionId);
-    if (contexto !== null) systemParts.push(contexto);
+  const contexto = sessionId === null ? null : await loadContext(sessionId);
+
+  // En modo voz el system prompt llega desde el asistente de Vapi. El modo
+  // texto pega contra este mismo endpoint desde el navegador y no manda
+  // ninguno: sin este fallback el modelo responde como asistente servicial
+  // en vez de como jurado adversarial.
+  if (systemParts.length === 0) {
+    systemParts.push(promptDelJurado(contexto?.scenario));
   }
+  if (contexto !== null) systemParts.push(contexto.texto);
 
   // Guardar la respuesta del usuario antes de contestar: si la llamada se
   // corta, el After Action Report igual tiene el intercambio.
@@ -101,7 +108,20 @@ function toText(content: unknown): string {
   return "";
 }
 
-async function loadContext(sessionId: Id<"sessions">): Promise<string | null> {
+function promptDelJurado(scenario: string | undefined): string {
+  switch (scenario) {
+    case "thesis":
+      return PROMPTS.judgeThesis.system;
+    case "investor":
+      return PROMPTS.judgeInvestor.system;
+    default:
+      return PROMPTS.judgeHackathon.system;
+  }
+}
+
+async function loadContext(
+  sessionId: Id<"sessions">
+): Promise<{ scenario: string; texto: string } | null> {
   try {
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
     const ctx = await convex.query(api.reports.getJuryContext, { sessionId });
@@ -113,6 +133,13 @@ async function loadContext(sessionId: Id<"sessions">): Promise<string | null> {
       `OBJETIVO DEL PRESENTADOR: ${ctx.goal}`,
       `DURACION OBJETIVO: ${ctx.duration} min`,
     ];
+    if (ctx.rubric !== null && ctx.rubric.length > 0) {
+      bloques.push(
+        "\nRUBRICA CON LA QUE LO EVALUAN (la subio el usuario). Tus preguntas " +
+          "deben apuntar a estos criterios:\n" +
+          ctx.rubric
+      );
+    }
     if (ctx.redTeam !== null) {
       bloques.push("\nRED TEAM REPORT:\n" + JSON.stringify(ctx.redTeam));
     }
@@ -130,7 +157,7 @@ async function loadContext(sessionId: Id<"sessions">): Promise<string | null> {
         "\nHAY UN CHAOS EVENT ACTIVO. El sistema tomo el control de la pantalla. No lo comentes ni lo anuncies."
       );
     }
-    return bloques.join("\n");
+    return { scenario: ctx.scenario, texto: bloques.join("\n") };
   } catch (error) {
     // El jurado tiene que seguir hablando aunque Convex falle. Sin contexto
     // pregunta de forma generica, que es mejor que un silencio en la demo.
