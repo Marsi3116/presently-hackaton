@@ -10,14 +10,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JuryAvatar, type JuryState } from "@/components/jury-avatar";
 import { ChaosOverlay } from "@/components/chaos-overlay";
+import { VoiceCheck } from "@/components/voice-check";
+import { VoiceFailedModal } from "@/components/voice-failed-modal";
 import { JURADOS, assistantIdFor, type Scenario } from "@/lib/jury";
 
 const CHAOS_SEGUNDOS = 30;
 /** Turnos del jurado antes del Chaos Event (docs/00-mvp-scope.md). */
 const TURNOS_ANTES_DEL_CHAOS = 3;
 
-type Fase = "listo" | "conectando" | "en_vivo" | "chaos" | "cerrando" | "error";
+type Fase =
+  | "listo"
+  | "chequeo"
+  | "conectando"
+  | "en_vivo"
+  | "chaos"
+  | "cerrando"
+  | "error";
 type Modo = "voz" | "texto";
+
+/** Saca el detalle util del error de Vapi, que no siempre es un Error. */
+function describirFalloDeVoz(e: unknown): string {
+  if (typeof e === "object" && e !== null) {
+    const o = e as Record<string, unknown>;
+    for (const k of ["errorMsg", "error", "message"]) {
+      const v = o[k];
+      if (typeof v === "string" && v.length > 0) return v;
+    }
+  }
+  if (e instanceof Error) return e.message;
+  return "";
+}
 
 export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const router = useRouter();
@@ -120,15 +142,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       });
       vapi.on("error", (e: unknown) => {
         console.error("[vapi]", e);
-        const detalle =
-          typeof e === "object" && e !== null && "errorMsg" in e
-            ? String((e as { errorMsg: unknown }).errorMsg)
-            : "";
-        setError(
-          `Se corto la llamada de voz${detalle ? ": " + detalle : ""}. ` +
-            "Puede ser el microfono, la conexion o el limite de la cuenta. " +
-            "Cambia a modo texto arriba a la derecha para seguir sin voz."
-        );
+        setError(describirFalloDeVoz(e));
         setFase("error");
       });
       vapi.on("message", (msg: {
@@ -164,10 +178,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       await vapi.start(assistantId, { metadata: { sessionId } });
     } catch (e) {
       console.error("[present]", e);
-      setError(
-        (e instanceof Error ? e.message : "No se pudo iniciar la llamada.") +
-          " Puedes seguir en modo texto."
-      );
+      setError(describirFalloDeVoz(e));
       setFase("error");
     }
   }, [scenario, sessionId, arrancar, addTranscript, ahora]);
@@ -295,6 +306,34 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
         />
       )}
 
+      {fase === "chequeo" && (
+        <VoiceCheck
+          onListo={() => void empezarVoz()}
+          onTexto={() => {
+            setModo("texto");
+            setError(null);
+            arrancar();
+          }}
+          onCancelar={() => setFase("listo")}
+        />
+      )}
+
+      {fase === "error" && (
+        <VoiceFailedModal
+          detalle={error}
+          onTexto={() => {
+            setModo("texto");
+            setError(null);
+            arrancar();
+          }}
+          onReintentar={() => {
+            setError(null);
+            setFase("chequeo");
+          }}
+          onCerrar={() => setFase("listo")}
+        />
+      )}
+
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline px-6 py-4 md:px-10">
         <div className="flex items-center gap-4">
           <span className="label-sec">&#9656; SEC 04 &middot; EN VIVO</span>
@@ -406,18 +445,22 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
               <>
                 <Button
                   size="lg"
-                  onClick={() => (modo === "voz" ? void empezarVoz() : arrancar())}
+                  onClick={() =>
+                    modo === "voz" ? setFase("chequeo") : arrancar()
+                  }
                 >
-                  {modo === "voz" ? "Empezar con voz →" : "Empezar en texto →"}
+                  {modo === "voz"
+                    ? "Probar micrófono y empezar →"
+                    : "Empezar en texto →"}
                 </Button>
                 {modo === "voz" && (
                   <p className="text-center font-mono text-[11px] tracking-[0.12em] text-ink-muted uppercase">
-                    NECESITA MICROFONO Y CREDITOS DE VOZ
+                    PRIMERO PROBAMOS QUE TE ESCUCHEMOS
                   </p>
                 )}
               </>
             )}
-            {fase === "conectando" && (
+            {(fase === "conectando" || fase === "chequeo") && (
               <Button size="lg" disabled>
                 Conectando&hellip;
               </Button>

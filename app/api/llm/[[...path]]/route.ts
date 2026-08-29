@@ -9,6 +9,13 @@ import { PROMPTS } from "@/lib/prompts.generated";
 // chat/completions de OpenAI, asi que la request entra y la respuesta sale en
 // ese formato, con SSE.
 //
+// Catch-all opcional a proposito: Vapi trata la url configurada como BASE y le
+// agrega /chat/completions, igual que haria con la API de OpenAI. Con una ruta
+// fija en /api/llm, Vapi pegaba a /api/llm/chat/completions, recibia un 404 y
+// cortaba la llamada con "error-providerfault-custom-llm-llm-failed" sin un
+// solo turno. Asi responden las dos formas, y tambien el modo texto del
+// navegador, que pega directo a /api/llm.
+//
 // Ruta publica a proposito: la llama Vapi server-to-server, sin sesion de
 // Clerk. Ver proxy.ts.
 

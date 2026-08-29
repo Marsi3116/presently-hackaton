@@ -112,8 +112,15 @@ Botón **Empezar simulación**. Aquí eliges cómo:
 
 El switch está arriba a la derecha y solo aparece antes de empezar.
 
-**En modo voz**, el navegador te pide permiso de micrófono. Dale aceptar o no
-hay simulación. Presenta en voz alta como lo harías de verdad.
+**En modo voz**, antes de conectar aparece una **prueba de micrófono**: el
+navegador pide permiso y te muestra un medidor. Di algo corto — "hola, uno,
+dos, tres" — y cuando el medidor se mueva, el botón para empezar se habilita.
+
+Esa prueba existe porque un micrófono silenciado o un permiso denegado antes
+se descubrían recién con la simulación empezada, que es el peor momento.
+
+Si algo falla a mitad, aparece un aviso que te lleva **directo al modo texto**
+sin perder la sesión: mismo jurado, mismo Red Team report, mismo Chaos Event.
 
 **En modo texto**, escribes lo que dirías. Mismo jurado, mismas preguntas,
 mismo análisis.
