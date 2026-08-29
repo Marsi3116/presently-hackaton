@@ -1,0 +1,116 @@
+import { v } from "convex/values";
+import { query, internalQuery, internalMutation } from "./_generated/server";
+import { requireUserId } from "./lib/auth";
+
+export const getBySession = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx.auth);
+    const session = await ctx.db.get(args.sessionId);
+    if (session === null || session.userId !== userId) return null;
+    return await ctx.db
+      .query("redTeamReports")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+  },
+});
+
+/** Contexto que necesita la action del Red Team. No pasa por sesion de usuario. */
+export const loadAnalysisInput = internalQuery({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (session === null) return null;
+    const upload = await ctx.db
+      .query("uploads")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+    if (upload === null) return null;
+    return {
+      scenario: session.scenario,
+      goal: session.goal,
+      duration: session.duration,
+      extractedText: upload.extractedText ?? "",
+      uploadId: upload._id,
+    };
+  },
+});
+
+export const saveRedTeamReport = internalMutation({
+  args: {
+    sessionId: v.id("sessions"),
+    uploadId: v.id("uploads"),
+    readinessScore: v.number(),
+    subscores: v.object({
+      argumentation: v.number(),
+      evidence: v.number(),
+      narrative: v.number(),
+      defendability: v.number(),
+    }),
+    weaknesses: v.array(
+      v.object({
+        type: v.union(
+          v.literal("unsupported_claim"),
+          v.literal("contradiction"),
+          v.literal("undefined_term"),
+          v.literal("narrative_gap"),
+          v.literal("weak_argument"),
+          v.literal("missing_evidence"),
+          v.literal("false_uniqueness")
+        ),
+        severity: v.union(
+          v.literal("critical"),
+          v.literal("warning"),
+          v.literal("info")
+        ),
+        slide: v.optional(v.string()),
+        title: v.string(),
+        description: v.string(),
+        excerpt: v.optional(v.string()),
+      })
+    ),
+    probableQuestions: v.array(
+      v.object({
+        probability: v.number(),
+        question: v.string(),
+        askedBy: v.string(),
+        riskLevel: v.union(
+          v.literal("high"),
+          v.literal("medium"),
+          v.literal("low")
+        ),
+        relatedWeaknessIndex: v.optional(v.number()),
+      })
+    ),
+    summary: v.string(),
+    pitchSummary: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { sessionId, ...report } = args;
+
+    // Re-analizar reemplaza el reporte anterior: una sesion tiene uno solo.
+    const previous = await ctx.db
+      .query("redTeamReports")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .collect();
+    for (const old of previous) await ctx.db.delete(old._id);
+
+    await ctx.db.insert("redTeamReports", {
+      sessionId,
+      ...report,
+      createdAt: Date.now(),
+    });
+    await ctx.db.patch(sessionId, { status: "ready" });
+    return null;
+  },
+});
+
+export const markFailed = internalMutation({
+  args: { sessionId: v.id("sessions") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { status: "failed" });
+    return null;
+  },
+});

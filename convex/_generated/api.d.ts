@@ -9,6 +9,8 @@
  */
 
 import type * as lib_auth from "../lib/auth.js";
+import type * as redTeam from "../redTeam.js";
+import type * as reports from "../reports.js";
 import type * as sessions from "../sessions.js";
 import type * as uploads from "../uploads.js";
 
@@ -20,6 +22,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
+  redTeam: typeof redTeam;
+  reports: typeof reports;
   sessions: typeof sessions;
   uploads: typeof uploads;
 }>;

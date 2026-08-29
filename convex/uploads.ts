@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { requireUserId } from "./lib/auth";
 
 export const generateUploadUrl = mutation({
@@ -51,6 +52,14 @@ export const save = mutation({
     });
 
     await ctx.db.patch(args.sessionId, { status: "analyzing" });
+
+    // El Red Team tarda 10-30s. Se agenda en vez de esperarse para que la
+    // mutation devuelva ya y la UI pueda mostrar el estado "analizando".
+    if ((args.extractedText ?? "").trim().length > 0) {
+      await ctx.scheduler.runAfter(0, internal.redTeam.analyze, {
+        sessionId: args.sessionId,
+      });
+    }
     return uploadId;
   },
 });
