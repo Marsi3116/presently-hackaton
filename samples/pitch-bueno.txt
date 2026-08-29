@@ -1,0 +1,31 @@
+PITCH BUENO — para comparar
+Duración: ~35 segundos leído en voz alta, sin pausas de relleno.
+
+El mismo producto que pitch-malo.txt, dicho bien. Súbelo en una segunda
+sesión y compara los dos scores: es la forma más rápida de ver qué está
+midiendo la app.
+
+Diferencias deliberadas contra el malo:
+  - Cero muletillas
+  - El número lleva su fuente
+  - Nombra competidores reales en vez de decir "somos únicos"
+  - Frases cortas, ritmo parejo
+
+Lo que debería salir en el reporte:
+  - Muletillas en cero
+  - Ritmo entre 110 y 165 palabras por minuto
+  - Menos debilidades, y más leves
+
+────────────────────────────────────────────────────────────────────
+
+Presently es un simulador adversarial de presentaciones.
+
+Nadie falla por las diapositivas. Falla por la pregunta que no esperaba.
+
+Funciona en tres pasos. Un red team lee tu presentación y marca los
+claims sin evidencia, citando la diapositiva exacta. Después un jurado
+con voz te interroga sobre esas debilidades. Y a mitad del Q&A aparece
+un competidor real, buscado en la web en ese momento.
+
+Yoodli y Poised analizan cómo hablas. Nosotros simulamos a quien te va a
+cuestionar.

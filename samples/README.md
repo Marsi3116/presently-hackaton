@@ -7,6 +7,8 @@ Generado con `node scripts/make-samples.mjs`.
 | `deck-demo.pdf` | Pitch de 8 paginas con 7 fallas plantadas |
 | `rubrica-demo.pdf` | Rubrica como documento |
 | `rubrica-demo.png` | La misma rubrica como foto, para probar el camino de vision |
+| `pitch-malo.txt` | Guion de ~35s para leer en voz alta, lleno de muletillas y claims sin fuente |
+| `pitch-bueno.txt` | El mismo producto dicho bien, para comparar los dos scores |
 
 ## Fallas plantadas en el deck
 
@@ -34,3 +36,19 @@ Lo que si tiene que cumplirse:
 - **Las citas de pagina son exactas.** Si el 43% sale como "Slide 3" en vez
   de "Slide 4", se rompio `markPages()` en `lib/parse-ppt.ts`.
 - **Los `excerpt` son texto literal del PDF**, no parafraseo.
+
+## Los guiones hablados
+
+`pitch-malo.txt` y `pitch-bueno.txt` son para LEER EN VOZ ALTA en
+`/present`, no para subir. Sirven para ver qué mide la app sobre la forma
+de hablar.
+
+Medido sobre ambos:
+
+| | Palabras | Duración | Ritmo | Muletillas | Pausas |
+|---|---|---|---|---|---|
+| malo | 55 | ~33s | 100 ppm (lento) | 21.8 /100 | 2 |
+| bueno | 80 | ~36s | 133 ppm (adecuado) | 0 | 0 |
+
+Léelos en dos sesiones distintas y compara los reportes: mismo producto,
+scores muy distintos. Es la forma más rápida de mostrar qué hace la app.

@@ -1,0 +1,26 @@
+PITCH MALO — para probar la app
+Duración: ~35 segundos leído en voz alta, contando las dos pausas.
+
+Lee esto TAL CUAL, incluidas las pausas. Está escrito para disparar todo
+lo que el sistema detecta.
+
+Lo que debería salir en el reporte:
+  - Muletillas por encima de 15 por cada 100 palabras
+  - Dos pausas de más de 2 segundos
+  - Un claim sin fuente (el 90%) y una falsa unicidad
+  - El jurado preguntando por ambos
+
+────────────────────────────────────────────────────────────────────
+
+Bueno, o sea, hola. Digamos que nosotros hicimos, este, una aplicación.
+
+[PAUSA de 3 segundos]
+
+Básicamente, como que, ayuda a mejorar tus presentaciones. Y nada,
+obviamente eso es importante. Nosotros vimos que el 90% de la gente
+presenta mal.
+
+[PAUSA de 3 segundos]
+
+Este, y bueno, somos los únicos en el mercado. No hay nadie más.
+Entonces, digamos, creemos que puede funcionar. Gracias.

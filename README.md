@@ -47,6 +47,7 @@ npm run samples      # genera los archivos de muestra
 | `deck-demo.pdf` | Pitch de 8 páginas con **7 fallas plantadas**, una por cada tipo que el sistema detecta |
 | `rubrica-demo.pdf` | Rúbrica como documento |
 | `rubrica-demo.png` | La misma rúbrica como foto, para ejercitar la lectura por visión |
+| `pitch-malo.txt` / `pitch-bueno.txt` | Guiones de ~35s para leer en voz alta y comparar scores |
 
 Sobre ese deck el análisis devuelve score **58**, y cita el claim del 43% en la
 Slide 4 y la falsa unicidad en la Slide 5, con el texto exacto de cada una.
@@ -148,6 +149,7 @@ proxy.ts                # middleware de Clerk (en Next 16 se llama proxy)
 | [`docs/07-manual-de-usuario.md`](docs/07-manual-de-usuario.md) | **Manual de usuario**: el recorrido completo y qué hacer en cada pantalla |
 | [`docs/08-servicios-y-costos.md`](docs/08-servicios-y-costos.md) | Qué servicio se activa cuándo, su fallback, y el costo por simulación |
 | [`docs/09-rubrica-y-autoevaluacion.md`](docs/09-rubrica-y-autoevaluacion.md) | La rúbrica del hackathon y dónde estamos contra cada criterio |
+| [`docs/10-guion-demo-3min.md`](docs/10-guion-demo-3min.md) | El guion minuto a minuto de la demo, calibrado contra la rúbrica |
 | [`DEPLOY.md`](DEPLOY.md) | Desplegar en Vercel + Convex |
 
 ## Diseño
