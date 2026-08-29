@@ -13,6 +13,7 @@ import { ChaosOverlay } from "@/components/chaos-overlay";
 import { VoiceCheck } from "@/components/voice-check";
 import { VoiceFailedModal } from "@/components/voice-failed-modal";
 import { JURADOS, assistantIdFor, type Scenario } from "@/lib/jury";
+import { analyzeSpeech } from "@/lib/speech-metrics";
 
 const CHAOS_SEGUNDOS = 30;
 /** Turnos del jurado antes del Chaos Event (docs/00-mvp-scope.md). */
@@ -22,6 +23,7 @@ type Fase =
   | "listo"
   | "chequeo"
   | "conectando"
+  | "exponiendo"
   | "en_vivo"
   | "chaos"
   | "cerrando"
@@ -63,15 +65,28 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const [escrito, setEscrito] = useState("");
   const [pensando, setPensando] = useState(false);
 
-  const vapiRef = useRef<{ stop: () => void; setMuted: (m: boolean) => void } | null>(null);
+  type VapiClient = InstanceType<typeof import("@vapi-ai/web").default>;
+  const vapiRef = useRef<VapiClient | null>(null);
   const chaosDisparado = useRef(false);
   const chaosMostrado = useRef(false);
   const inicioRef = useRef<number>(0);
   const chaosInicioRef = useRef<number>(0);
 
+  const transcripts = useQuery(api.transcripts.listBySession, { sessionId }) ?? [];
+  const metricas = analyzeSpeech(
+    transcripts
+      .filter((t) => t.phase === "presentation")
+      .map((t) => ({
+        text: t.text,
+        startTimestamp: t.startTimestamp,
+        endTimestamp: t.endTimestamp,
+      }))
+  );
+
   const scenario = (session?.scenario ?? "hackathon") as Scenario;
   const jurado = JURADOS[scenario];
-  const enCurso = fase === "en_vivo" || fase === "chaos";
+  const enCurso =
+    fase === "exponiendo" || fase === "en_vivo" || fase === "chaos";
 
   // ---- cronometro ----
   useEffect(() => {
@@ -115,9 +130,37 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const arrancar = useCallback(() => {
     inicioRef.current = Date.now();
     setSegundos(0);
-    setFase("en_vivo");
+    setFase("exponiendo");
     setJuryState("listening");
     void setStatus({ sessionId, status: "presenting" }).catch(() => {});
+  }, [sessionId, setStatus]);
+
+  /**
+   * Cierra la exposicion y abre el Q&A.
+   *
+   * Durante la exposicion el jurado esta muteado en Vapi: escucha y acumula
+   * transcripcion, pero no interrumpe. Antes preguntaba desde el primer
+   * segundo, que no es como funciona una presentacion real.
+   */
+  const empezarQa = useCallback(() => {
+    setFase("en_vivo");
+    setJuryState("thinking");
+    void setStatus({ sessionId, status: "qa" }).catch(() => {});
+    const vapi = vapiRef.current;
+    if (vapi !== null) {
+      vapi.send({ type: "control", control: "unmute-assistant" });
+      // Empuja al jurado a abrir con la pregunta de mayor riesgo del Red Team.
+      vapi.send({
+        type: "add-message",
+        message: {
+          role: "system",
+          content:
+            "El presentador termino su exposicion. Empieza el Q&A ahora con la " +
+            "pregunta de mayor probabilidad y riesgo del Red Team report.",
+        },
+        triggerResponseEnabled: true,
+      });
+    }
   }, [sessionId, setStatus]);
 
   // ---- modo voz ----
@@ -137,7 +180,12 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       const vapi = new Vapi(publicKey);
       vapiRef.current = vapi;
 
-      vapi.on("call-start", arrancar);
+      vapi.on("call-start", () => {
+        // Silencio hasta que el presentador termine: durante la exposicion el
+        // jurado solo escucha.
+        vapi.send({ type: "control", control: "mute-assistant" });
+        arrancar();
+      });
       vapi.on("speech-start", () => setJuryState("speaking"));
       vapi.on("speech-end", () => setJuryState("listening"));
       vapi.on("volume-level", (v: number) => setVolumen(v));
@@ -301,7 +349,12 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     router.push(`/report/${sessionId}`);
   }, [generateReport, router, sessionId, setStatus]);
 
-  useEffect(() => () => vapiRef.current?.stop(), []);
+  useEffect(
+    () => () => {
+      vapiRef.current?.stop();
+    },
+    []
+  );
 
   const mm = String(Math.floor(segundos / 60)).padStart(2, "0");
   const ss = String(segundos % 60).padStart(2, "0");
@@ -350,7 +403,14 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
 
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hairline px-5 py-3.5 sm:px-6 sm:py-4 md:px-10">
         <div className="flex items-center gap-4">
-          <span className="label-sec">&#9656; SEC 04 &middot; EN VIVO</span>
+          <span className="label-sec">
+            &#9656;{" "}
+            {fase === "exponiendo"
+              ? "SEC 04 · EXPONIENDO"
+              : fase === "en_vivo" || fase === "chaos"
+                ? "SEC 05 · Q&A"
+                : "SEC 04 · EN VIVO"}
+          </span>
           <span className="label-meta hidden sm:inline">{scenario.toUpperCase()}</span>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">
@@ -412,8 +472,10 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
             )}
             {pensando && <li className="label-meta">EL JURADO ESTA PENSANDO&hellip;</li>}
             {mensajes.length === 0 && enVivo.length === 0 && (
-              <li className="text-[15px] text-ink-muted">
-                Cuando empieces, lo que digas aparece aqui.
+              <li className="text-[15px] leading-relaxed text-ink-muted">
+                {fase === "exponiendo"
+                  ? "Presenta como lo harías de verdad. El jurado escucha sin interrumpir; cuando termines, aprieta “Terminé” y empieza el Q&A."
+                  : "Cuando empieces, lo que digas aparece aquí."}
               </li>
             )}
           </ul>
@@ -448,6 +510,40 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
             volume={volumen}
           />
 
+          {metricas !== null && enCurso && (
+            <dl className="grid w-full grid-cols-3 border border-hairline">
+              <div className="border-r border-hairline px-3 py-3 text-center">
+                <dt className="label-meta">RITMO</dt>
+                <dd
+                  className={`display mt-1 text-xl font-bold tabular-nums ${
+                    metricas.pace === "adecuado" ? "text-teal" : "text-amber"
+                  }`}
+                >
+                  {metricas.wordsPerMinute}
+                </dd>
+                <dd className="label-meta mt-0.5">PPM</dd>
+              </div>
+              <div className="border-r border-hairline px-3 py-3 text-center">
+                <dt className="label-meta">MULETILLAS</dt>
+                <dd
+                  className={`display mt-1 text-xl font-bold tabular-nums ${
+                    metricas.fillerRate > 4 ? "text-crimson" : "text-ink"
+                  }`}
+                >
+                  {metricas.fillerRate}
+                </dd>
+                <dd className="label-meta mt-0.5">/100 PAL</dd>
+              </div>
+              <div className="px-3 py-3 text-center">
+                <dt className="label-meta">PAUSAS</dt>
+                <dd className="display mt-1 text-xl font-bold text-ink tabular-nums">
+                  {metricas.pauseCount}
+                </dd>
+                <dd className="label-meta mt-0.5">&gt;2 SEG</dd>
+              </div>
+            </dl>
+          )}
+
           {error !== null && (
             <p className="w-full border-l-2 border-crimson bg-crimson-dim/20 px-4 py-3 text-[14px] leading-relaxed text-ink">
               {error}
@@ -479,7 +575,17 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
                 Conectando&hellip;
               </Button>
             )}
-            {enCurso && (
+            {fase === "exponiendo" && (
+              <>
+                <Button size="lg" onClick={empezarQa}>
+                  Terminé, que pregunten &rarr;
+                </Button>
+                <p className="text-center font-mono text-[11px] tracking-[0.12em] text-ink-muted uppercase">
+                  EL JURADO ESCUCHA EN SILENCIO
+                </p>
+              </>
+            )}
+            {(fase === "en_vivo" || fase === "chaos") && (
               <Button size="lg" variant="outline" onClick={() => void terminar()}>
                 Terminar y generar reporte
               </Button>

@@ -133,7 +133,11 @@
 1. Usuario click en "Empezar" → Vapi conecta, se establece llamada
 2. Usuario habla, transcripción aparece en vivo abajo
 3. Usuario cambia slides con el botón (o auto si no cambia en X seg)
-4. Cuando el timer llega a 0 o el usuario dice "he terminado" o pausa 8 seg:
+4. El jurado está **muteado** durante toda la exposición: escucha y acumula
+   transcripción, pero no interrumpe. En pantalla se ven las métricas de habla
+   en vivo (ritmo en palabras por minuto, muletillas por cada 100 palabras y
+   pausas de más de 2 segundos).
+5. El usuario aprieta `[ Terminé, que pregunten → ]` o el timer llega a 0:
    - Estado del jurado cambia a "Pensando"
    - Se guarda la transcripción completa en Convex
    - Auto-scroll a la sección Q&A (siguiente pantalla, misma ruta)

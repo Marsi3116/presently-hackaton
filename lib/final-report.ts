@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PROMPTS } from "./prompts.generated";
 import { generateJson } from "./llm";
+import { analyzeSpeech, describeSpeech, type Segment } from "./speech-metrics";
 
 const score = z.number().min(0).max(100);
 
@@ -46,6 +47,8 @@ export type ReportInput = {
   duration: number;
   /** Texto del material subido, para medir que tanto de eso llego a decirse. */
   deckText?: string;
+  /** Segmentos con tiempos, para medir muletillas, ritmo y pausas. */
+  speechSegments?: Segment[];
   redTeamReportJson: string;
   presentationTranscript: string;
   qaHistory: string;
@@ -66,7 +69,10 @@ export async function runFinalReport(input: ReportInput): Promise<FinalReport> {
 
   return await generateJson({
     system: PROMPTS.finalReport.system + COBERTURA,
-    prompt: prompt + bloqueDeck(input.deckText),
+    prompt:
+      prompt +
+      describeSpeech(analyzeSpeech(input.speechSegments ?? [])) +
+      bloqueDeck(input.deckText),
     temperature: 0.4,
     maxOutputTokens: 4096,
     parse: (value) => reportSchema.parse(value),
