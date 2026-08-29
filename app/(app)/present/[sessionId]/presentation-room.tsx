@@ -218,6 +218,14 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       if (vapi !== null) {
         // Se la damos hecha en vez de confiar en que el modelo arranque solo.
         vapi.send({ type: "say", message: pregunta, interruptionsEnabled: true });
+        // Y se la anotamos en su historial: "say" solo la pronuncia, no queda
+        // en el contexto del modelo, asi que al responder el usuario el jurado
+        // no sabia que ya habia preguntado y la repetia.
+        vapi.send({
+          type: "add-message",
+          message: { role: "assistant", content: pregunta },
+          triggerResponseEnabled: false,
+        });
         setJuryState("speaking");
       } else {
         setJuryState("listening");

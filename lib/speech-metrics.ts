@@ -4,15 +4,24 @@
 // transcripts. Barato, y suficiente para lo que el reporte necesita decir.
 
 /**
- * Muletillas del espanol hablado. Se cuentan como palabra suelta para no
- * marcar "esteban" al buscar "este", ni "bueno" dentro de "buenos dias".
+ * Muletillas que casi nunca son otra cosa. Se cuentan siempre.
+ *
+ * "eh", "um" y "mmm" NO estan aca a proposito: Deepgram los filtra antes de
+ * devolver la transcripcion y Vapi no expone la opcion para conservarlos, asi
+ * que buscarlos daria siempre cero y prometeria algo que no medimos.
  */
-const MULETILLAS = [
-  "eh", "ehh", "em", "este", "esto", "mmm", "hmm", "aja",
-  "o sea", "osea", "digamos", "como que", "tipo", "verdad",
-  "no se", "nose", "bueno", "entonces bueno", "y nada",
-  "basicamente", "literalmente", "obviamente",
+const MULETILLAS_CLARAS = [
+  "o sea", "osea", "digamos", "como que", "por asi decirlo",
+  "no se", "nose", "y nada", "en plan",
+  "basicamente", "literalmente", "obviamente", "practicamente",
 ];
+
+/**
+ * Palabras que son muletilla o no segun el contexto: "este proyecto" es un
+ * demostrativo legitimo, "este, entonces" es titubeo. Solo cuentan cuando van
+ * seguidas de coma o punto, que es como Deepgram marca la pausa.
+ */
+const MULETILLAS_AMBIGUAS = ["este", "esto", "bueno", "tipo", "verdad", "entonces"];
 
 export type SpeechMetrics = {
   words: number;
@@ -33,14 +42,30 @@ export type Segment = {
   endTimestamp: number;
 };
 
-function normalizar(texto: string): string {
+/** Minusculas y sin tildes, pero conservando la puntuacion. */
+function plegar(texto: string): string {
   return texto
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Solo letras y numeros, para contar palabras. */
+function normalizar(texto: string): string {
+  return plegar(texto)
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function contar(texto: string, termino: string, exigirPausa: boolean): number {
+  const cuerpo = termino.replace(/ /g, "\\s+");
+  // La pausa de Deepgram viene como coma o punto justo despues.
+  const cola = exigirPausa ? "\\s*[,.;]" : "(?![\\p{L}])";
+  const patron = new RegExp(`(?<![\\p{L}])${cuerpo}${cola}`, "giu");
+  return (texto.match(patron) ?? []).length;
 }
 
 export function analyzeSpeech(segments: Segment[]): SpeechMetrics | null {
@@ -56,10 +81,16 @@ export function analyzeSpeech(segments: Segment[]): SpeechMetrics | null {
   // Si los timestamps no sirven, se estima a un ritmo normal de habla.
   const durationSec = Math.max(1, fin - inicio || Math.round((words / 130) * 60));
 
+  // Con puntuacion: las ambiguas la necesitan para distinguirse.
+  const conPuntuacion = plegar(orden.map((s) => s.text).join(" "));
+
   const fillers: Array<{ term: string; count: number }> = [];
-  for (const m of MULETILLAS) {
-    const patron = new RegExp(`(?<![\\p{L}])${m.replace(/ /g, "\\s+")}(?![\\p{L}])`, "giu");
-    const count = (texto.match(patron) ?? []).length;
+  for (const m of MULETILLAS_CLARAS) {
+    const count = contar(conPuntuacion, m, false);
+    if (count > 0) fillers.push({ term: m, count });
+  }
+  for (const m of MULETILLAS_AMBIGUAS) {
+    const count = contar(conPuntuacion, m, true);
     if (count > 0) fillers.push({ term: m, count });
   }
   fillers.sort((a, b) => b.count - a.count);
@@ -86,7 +117,7 @@ export function analyzeSpeech(segments: Segment[]): SpeechMetrics | null {
     durationSec,
     wordsPerMinute,
     fillerRate: Math.round((totalFillers / words) * 1000) / 10,
-    fillers: fillers.slice(0, 5),
+    fillers: fillers.slice(0, 8),
     pauseCount,
     longestPauseSec,
     pace,

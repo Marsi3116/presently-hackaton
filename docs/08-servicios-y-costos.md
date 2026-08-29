@@ -99,6 +99,40 @@ en su propia nube.
 
 ---
 
+## Qué se puede medir del habla, y qué no
+
+El análisis de forma de hablar sale de la transcripción y de los tiempos de
+cada segmento. No toca el audio.
+
+**Se mide:**
+
+- **Ritmo** en palabras por minuto. Bajo 110 se arrastra, sobre 165 el oyente
+  pierde el hilo.
+- **Muletillas léxicas**: "o sea", "digamos", "básicamente", "obviamente",
+  "y nada", "como que", "no sé". Se reportan por cada 100 palabras, para que
+  el número sea comparable entre exposiciones de distinto largo.
+- **Muletillas ambiguas** — "este", "bueno", "tipo", "entonces" — solo cuando
+  van seguidas de coma o punto. "Este proyecto" es un demostrativo legítimo;
+  "este, entonces" es titubeo. Sin esa distinción el conteo se infla.
+- **Pausas** de más de 2 segundos entre segmentos, y la más larga.
+
+**No se mide:**
+
+- **"Eh", "um", "mmm".** Deepgram los filtra antes de devolver la
+  transcripción y Vapi no expone la opción para conservarlos. Buscarlos daría
+  siempre cero y prometería algo que no medimos.
+- **Volumen, entonación y tono.** Requieren procesar el audio, que no
+  guardamos.
+
+## Cuánto tiempo te deja hablar
+
+Los asistentes esperan **2 segundos** de silencio antes de contestar, y hasta
+**3 segundos** si la frase quedó sin puntuación — o sea, cuando suena a que
+todavía no terminaste. El timeout de silencio total es de 10 minutos.
+
+Con los valores por defecto de Vapi eran 0.4 segundos, y el jurado cortaba
+apenas hacías una pausa para pensar.
+
 ## Costos por simulación
 
 Medido sobre una llamada real: **USD 0.0622 por minuto de voz**, con este
