@@ -1,0 +1,45 @@
+MIT License with Attribution Requirement
+
+Copyright (c) 2026 Marsi Figueroa
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+1. ATTRIBUTION. The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+2. CITATION. Any public use, derivative work, publication, demonstration, or
+   distribution that builds on this Software must give visible credit to the
+   original author, naming the project "Presently" and linking to its
+   repository:
+
+       https://github.com/Marsi3116/presently-hackaton
+
+   For academic or written work, cite as:
+
+       Figueroa, M. (2026). Presently: adversarial presentation simulator.
+       https://github.com/Marsi3116/presently-hackaton
+
+   Credit must appear where a reader can reasonably find it: a README, an
+   about page, the credits of a presentation, or a references section.
+
+3. NO ENDORSEMENT. The author's name may not be used to endorse or promote
+   derivative products without prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Third-party content: the prompts under `prompts/` and the documents under
+`docs/` are covered by this same license. The dependencies listed in
+`package.json` keep their own licenses.

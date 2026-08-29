@@ -11,7 +11,7 @@ App: **https://presently-hackaton.vercel.app**
 
 Necesitas:
 
-- **Tu presentación** en PDF, PPTX o DOCX. Máximo 20 MB.
+- **Tu presentación** en PDF, PPTX o DOCX. Máximo 50 MB.
 - **Un navegador de escritorio.** Chrome o Edge para el modo voz.
 - **Micrófono**, solo si vas a usar voz. Sin micrófono también funciona.
 - **Opcional pero recomendado**: la rúbrica con la que te van a evaluar.

@@ -11,7 +11,7 @@
 - Sesión de Presently ya abierta en `/new`
 - PPT de prueba pre-cargado en `/mnt/user-data/uploads/demo-pitch.pptx` (con fallas intencionales — ver "PPT de prueba" al final de este doc)
 - Backup: video grabado de 2 min con demo funcional, listo para reproducir si algo falla
-- Voz del jurado ya probada en ElevenLabs, cargando rápido
+- Voz del jurado ya probada, cargando rápido
 
 ## El guion (3:00)
 
@@ -55,7 +55,7 @@
 
 *[Avatar del jurado cambia a estado "pensando" y luego "hablando"]*
 
-**Jurado (voz ElevenLabs, grave y firme)**:
+**Jurado (voz grave y firme)**:
 > "Mencionaste una reducción del 43%. ¿Cómo calcularon exactamente ese número? ¿Cuántas empresas participaron y cuál era el baseline?"
 
 **Presentador** (respondiendo mal a propósito):

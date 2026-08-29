@@ -52,7 +52,7 @@
 **Contenido**:
 - Header: "Subir material"
 - Dropzone grande centrada, con hint: "Arrastra tu PPT o PDF, o haz click"
-- Debajo: "PPT, PPTX, PDF · máx 20 MB"
+- Debajo: "PPT, PPTX, PDF · máx 50 MB"
 - Después de soltar el archivo:
   - Nombre del archivo + tamaño
   - Progress bar con **mensajes específicos que rotan**:
@@ -147,7 +147,7 @@
 **Layout similar a la anterior, con cambios**:
 - Slide se hace más pequeño
 - Avatar del jurado grande
-- El jurado empieza a hablar (voz de ElevenLabs)
+- El jurado empieza a hablar (TTS de OpenAI vía Vapi)
 - Debajo, la última pregunta se muestra transcrita en pantalla grande
 - Usuario responde hablando (Vapi captura)
 - Después de responder, jurado decide si hace follow-up (LLM decide) o pasa a la siguiente

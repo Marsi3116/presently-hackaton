@@ -6,7 +6,7 @@ Este documento es la fuente de verdad del scope. Si algo no está aquí, no se c
 
 ### 1. Upload de contenido
 - Drag & drop de PPT o PDF
-- Validación de tamaño (máx 20 MB) y formato
+- Validación de tamaño (máx 50 MB) y formato
 - Guardado en Convex Storage
 - Extracción de texto en el backend
 
@@ -25,7 +25,7 @@ Este documento es la fuente de verdad del scope. Si algo no está aquí, no se c
 - Estado visible del jurado (escuchando / pensando / hablando)
 
 ### 4. Q&A adversarial con voz
-- Jurado con voz de ElevenLabs
+- Jurado con voz (TTS de OpenAI vía Vapi)
 - Preguntas basadas en Red Team + lo que dijo el usuario
 - Follow-ups si la respuesta fue floja (LLM decide)
 - 2-3 intercambios antes del Chaos Event

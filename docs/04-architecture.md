@@ -42,7 +42,7 @@
 
 ## Componentes principales
 
-### 1. Frontend (Next.js 15 App Router)
+### 1. Frontend (Next.js 16 App Router)
 
 - **Server Components por defecto** para páginas que solo leen datos
 - **Client Components** para todo lo interactivo (present, chaos overlay, transcription)
