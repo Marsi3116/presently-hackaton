@@ -151,9 +151,18 @@ Lo que ves en pantalla:
 El jurado no espera a que termines para armar sus preguntas: ya leyó el Red
 Team report antes de que abrieras la boca.
 
-**El Q&A tiene un final.** Son seis preguntas. Arriba a la derecha ves en cuál
-vas (`PREGUNTA 3/6`), y cuando termina, el jurado cierra diciéndote si el pitch
-lo convenció o no. Ahí ya puedes generar el reporte.
+**El orden es: expones, chaos, y recién ahí el Q&A.**
+
+Cuando aprietas `Terminé mi presentación →` no vienen las preguntas: viene el
+Chaos Event. Es a propósito — la sorpresa golpea más justo cuando acabas de
+terminar y todavía nadie te interrogó. Tu respuesta a esos 30 segundos queda
+transcrita, y el jurado **arranca el Q&A comentando cómo la manejaste**.
+
+**El Q&A tiene un final: son cuatro preguntas**, y cada una ataca un frente
+distinto. En el escenario de hackathon: evidencia y datos, viabilidad técnica,
+usuario y usabilidad, y diferenciación y negocio. Arriba a la derecha ves en
+cuál vas (`PREGUNTA 3/4`). Al terminar, el jurado cierra diciéndote si el pitch
+lo convenció.
 
 ### 7. El Chaos Event
 

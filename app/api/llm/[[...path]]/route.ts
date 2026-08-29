@@ -134,6 +134,45 @@ function toText(content: unknown): string {
   return "";
 }
 
+/**
+ * Los frentes por los que ataca el jurado, en orden.
+ *
+ * Uno por turno. Un jurado real no insiste cuatro veces sobre la evidencia:
+ * pregunta por el dato, despues por como esta construido, despues por quien
+ * lo usa, y al final por que lo hace distinto.
+ */
+const EJES: Record<string, string[]> = {
+  hackathon: [
+    "EVIDENCIA Y DATOS: los numeros que dijo, de donde salen y como se midieron",
+    "VIABILIDAD TECNICA: como esta construido, que corre de verdad hoy y que es mockup",
+    "USUARIO Y USABILIDAD: quien lo usa, si lo probaron con gente real y que paso",
+    "DIFERENCIACION Y NEGOCIO: en que son distintos de lo que ya existe, y quien paga",
+  ],
+  thesis: [
+    "METODOLOGIA: como diseno el estudio y por que ese metodo",
+    "MUESTRA Y VALIDEZ: tamano, seleccion y que amenaza la validez de los resultados",
+    "MARCO TEORICO: en que literatura se apoya y que autores contradicen su postura",
+    "IMPLICANCIAS Y LIMITES: que se puede concluir de verdad y que no",
+  ],
+  investor: [
+    "MERCADO: que tan grande es de verdad y como llegaron a ese numero",
+    "UNIT ECONOMICS: cuanto cuesta traer un cliente y cuanto deja",
+    "COMPETENCIA: quien mas lo hace y por que no los aplasta",
+    "EQUIPO Y EJECUCION: por que este equipo y por que ahora",
+  ],
+};
+
+function ejeDelTurno(scenario: string, yaHechas: number): string {
+  const ejes = EJES[scenario] ?? EJES.hackathon;
+  const eje = ejes[yaHechas % ejes.length];
+  const restantes = ejes.filter((_, i) => i !== yaHechas % ejes.length);
+  return (
+    `\nEL FRENTE DE ESTA PREGUNTA ES: ${eje}\n` +
+    "Quedate en ese frente y no vuelvas a los que ya cubriste:\n" +
+    restantes.map((e) => `- ${e.split(":")[0]}`).join("\n")
+  );
+}
+
 function promptDelJurado(scenario: string | undefined): string {
   switch (scenario) {
     case "thesis":
@@ -191,6 +230,8 @@ async function loadContext(
         "\nLO QUE DIJO EL PRESENTADOR:\n" + recortarFinal(ctx.transcript, 2500)
       );
     }
+    const yaPreguntadas = ctx.qa.filter((m) => m.role === "jury");
+
     if (ctx.qa.length > 0) {
       // Solo los ultimos turnos: el historial completo lo manda Vapi aparte.
       bloques.push(
@@ -201,6 +242,21 @@ async function loadContext(
             .join("\n")
       );
     }
+
+    if (yaPreguntadas.length > 0) {
+      // El "say" de Vapi no entra en el contexto del modelo, asi que sin esto
+      // el jurado repetia la pregunta que acababa de hacer.
+      bloques.push(
+        "\nPREGUNTAS QUE YA HICISTE. NO LAS REPITAS NI LAS PARAFRASEES:\n" +
+          yaPreguntadas.map((m) => `- ${m.text}`).join("\n")
+      );
+    }
+
+    // Cada turno ataca un frente distinto. Sin esto el jurado se quedaba
+    // clavado en el mismo tema: preguntaba por la evidencia, y el follow-up
+    // volvia a ser sobre evidencia.
+    bloques.push(ejeDelTurno(ctx.scenario, yaPreguntadas.length));
+
     if (ctx.chaosActive) {
       bloques.push(
         "\nHAY UN CHAOS EVENT ACTIVO. El sistema tomo el control de la pantalla. No lo comentes ni lo anuncies."

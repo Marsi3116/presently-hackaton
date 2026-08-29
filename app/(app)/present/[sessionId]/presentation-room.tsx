@@ -16,16 +16,15 @@ import { JURADOS, assistantIdFor, type Scenario } from "@/lib/jury";
 import { analyzeSpeech } from "@/lib/speech-metrics";
 
 const CHAOS_SEGUNDOS = 30;
-/** Turnos del jurado antes del Chaos Event (docs/00-mvp-scope.md). */
-const TURNOS_ANTES_DEL_CHAOS = 3;
-/** Preguntas totales del Q&A antes de que el jurado cierre. */
-const TURNOS_TOTALES = 6;
+/** Preguntas del Q&A antes de que el jurado cierre. Una por frente. */
+const TURNOS_TOTALES = 4;
 
 type Fase =
   | "listo"
   | "chequeo"
   | "conectando"
   | "exponiendo"
+  | "esperando_chaos"
   | "en_vivo"
   | "chaos"
   | "cerrando"
@@ -99,7 +98,10 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const scenario = (session?.scenario ?? "hackathon") as Scenario;
   const jurado = JURADOS[scenario];
   const enCurso =
-    fase === "exponiendo" || fase === "en_vivo" || fase === "chaos";
+    fase === "exponiendo" ||
+    fase === "esperando_chaos" ||
+    fase === "en_vivo" ||
+    fase === "chaos";
 
   useEffect(() => {
     faseRef.current =
@@ -118,17 +120,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     []
   );
 
-  // ---- disparo del Chaos Event ----
   const preguntasDelJurado = mensajes.filter((m) => m.role === "jury").length;
-  useEffect(() => {
-    if (fase !== "en_vivo") return;
-    if (chaosDisparado.current) return;
-    if (preguntasDelJurado < TURNOS_ANTES_DEL_CHAOS) return;
-    chaosDisparado.current = true;
-    void triggerChaos({ sessionId }).catch((e) => {
-      console.error("[present] fallo el chaos event:", e);
-    });
-  }, [fase, preguntasDelJurado, sessionId, triggerChaos]);
 
   // El registro del chaos queda en la base para siempre, asi que sin este
   // guard el overlay se reabria apenas la fase volvia a "en_vivo": se cerraba
@@ -136,10 +128,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   useEffect(() => {
     if (chaosMostrado.current) return;
     if (chaos === null || chaos === undefined) return;
-    if (fase !== "en_vivo") return;
-    // Esperar a que el jurado termine su turno: irrumpir a mitad de una
-    // pregunta dejaba la frase cortada y sin respuesta posible.
-    if (juryState === "speaking" || juryState === "thinking") return;
+    if (fase !== "esperando_chaos") return;
     chaosMostrado.current = true;
     chaosInicioRef.current = Date.now();
     setFase("chaos");
@@ -148,7 +137,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     // usuario, que era justo lo contrario: durante los 30 segundos del chaos
     // no se transcribia nada de lo que respondia.
     vapiRef.current?.send({ type: "control", control: "mute-assistant" });
-  }, [chaos, fase, juryState, sessionId, setStatus]);
+  }, [chaos, fase, sessionId, setStatus]);
 
   // ---- arranque comun a los dos modos ----
   const arrancar = useCallback(() => {
@@ -209,58 +198,6 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     },
     [sessionId]
   );
-
-  /**
-   * Cierra la exposicion y abre el Q&A.
-   *
-   * La primera pregunta se pide explicitamente en vez de esperar a que el
-   * modelo se dispare solo: con Vapi eso dependia de que el trigger llegara,
-   * y en modo texto no habia ningun Vapi, asi que no pasaba nada y el
-   * cronometro seguia corriendo sin que nadie preguntara.
-   */
-  const empezarQa = useCallback(async () => {
-    setFase("en_vivo");
-    setJuryState("thinking");
-    setPensando(true);
-    void setStatus({ sessionId, status: "qa" }).catch(() => {});
-
-    const vapi = vapiRef.current;
-    vapi?.send({ type: "control", control: "unmute-assistant" });
-
-    try {
-      const pregunta = await pedirTurnoDelJurado(
-        "El presentador termino su exposicion. Hazle AHORA la primera pregunta " +
-          "del Q&A: la de mayor probabilidad y riesgo del Red Team report. " +
-          "Solo la pregunta, sin saludo ni preambulo.",
-        true
-      );
-      if (pregunta.length === 0) throw new Error("respuesta vacia");
-
-      if (vapi !== null) {
-        // Se la damos hecha en vez de confiar en que el modelo arranque solo.
-        vapi.send({ type: "say", message: pregunta, interruptionsEnabled: true });
-        // Y se la anotamos en su historial: "say" solo la pronuncia, no queda
-        // en el contexto del modelo, asi que al responder el usuario el jurado
-        // no sabia que ya habia preguntado y la repetia.
-        vapi.send({
-          type: "add-message",
-          message: { role: "assistant", content: pregunta },
-          triggerResponseEnabled: false,
-        });
-        setJuryState("speaking");
-      } else {
-        setJuryState("listening");
-      }
-    } catch (e) {
-      console.error("[present] no se pudo abrir el Q&A:", e);
-      setError(
-        "El jurado no pudo formular la primera pregunta. Escribe o di algo y va a responder."
-      );
-      setJuryState("listening");
-    } finally {
-      setPensando(false);
-    }
-  }, [sessionId, setStatus, pedirTurnoDelJurado]);
 
   // ---- modo voz ----
   const empezarVoz = useCallback(async () => {
@@ -370,6 +307,74 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     }
   }, [escrito, pensando, ahora, addTranscript, sessionId, fase, pedirTurnoDelJurado]);
 
+  /**
+   * Abre el Q&A. El jurado arranca comentando como respondiste al chaos y
+   * recien despues hace su primera pregunta.
+   */
+  const abrirQa = useCallback(async () => {
+    setFase("en_vivo");
+    setJuryState("thinking");
+    setPensando(true);
+    void setStatus({ sessionId, status: "qa" }).catch(() => {});
+    const vapi = vapiRef.current;
+    vapi?.send({ type: "control", control: "unmute-assistant" });
+
+    try {
+      const turno = await pedirTurnoDelJurado(
+        "El presentador ya expuso y ya respondio al competidor sorpresa. " +
+          "Empieza el Q&A: comenta en UNA frase corta que te parecio como " +
+          "manejo esa respuesta, y a continuacion hazle tu primera pregunta. " +
+          "Sin saludo ni preambulo.",
+        true
+      );
+      if (turno.length === 0) throw new Error("respuesta vacia");
+      if (vapi !== null) {
+        vapi.send({ type: "say", message: turno, interruptionsEnabled: true });
+        vapi.send({
+          type: "add-message",
+          message: { role: "assistant", content: turno },
+          triggerResponseEnabled: false,
+        });
+        setJuryState("speaking");
+      } else {
+        setJuryState("listening");
+      }
+    } catch (e) {
+      console.error("[present] no se pudo abrir el Q&A:", e);
+      setError(
+        "El jurado no pudo formular la primera pregunta. Escribe o di algo y va a responder."
+      );
+      setJuryState("listening");
+    } finally {
+      setPensando(false);
+    }
+  }, [sessionId, setStatus, pedirTurnoDelJurado]);
+
+  /**
+   * Cierra la exposicion y dispara el Chaos Event.
+   *
+   * El chaos va ANTES del Q&A: la pregunta sorpresa llega cuando el
+   * presentador acaba de terminar y todavia no lo interrogaron, que es cuando
+   * mas descoloca. Despues el jurado abre comentando esa respuesta.
+   */
+  const terminarExposicion = useCallback(async () => {
+    setFase("esperando_chaos");
+    setJuryState("thinking");
+    setPensando(true);
+    void setStatus({ sessionId, status: "chaos" }).catch(() => {});
+    vapiRef.current?.send({ type: "control", control: "mute-assistant" });
+    try {
+      await triggerChaos({ sessionId });
+    } catch (e) {
+      console.error("[present] fallo el chaos event:", e);
+      // Sin chaos igual hay Q&A: no se puede quedar colgado aca.
+      chaosMostrado.current = true;
+      await abrirQa();
+    } finally {
+      setPensando(false);
+    }
+  }, [sessionId, setStatus, triggerChaos, abrirQa]);
+
   const cerrarChaos = useCallback(
     (respuestaEscrita?: string) => {
       const dur = Math.max(
@@ -395,11 +400,9 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
           respuesta.length > 0 ? respuesta : "(no respondio al chaos event)",
         responseDurationSec: dur,
       }).catch(() => {});
-      setFase("en_vivo");
-      void setStatus({ sessionId, status: "qa" }).catch(() => {});
-      vapiRef.current?.send({ type: "control", control: "unmute-assistant" });
+      void abrirQa();
     },
-    [transcripts, sessionId, submitChaos, setStatus]
+    [transcripts, sessionId, submitChaos, abrirQa]
   );
 
   /**
@@ -504,9 +507,11 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
             &#9656;{" "}
             {fase === "exponiendo"
               ? "SEC 04 · EXPONIENDO"
-              : fase === "en_vivo" || fase === "chaos"
-                ? "SEC 05 · Q&A"
-                : "SEC 04 · EN VIVO"}
+              : fase === "esperando_chaos" || fase === "chaos"
+                ? "SEC 05 · CHAOS"
+                : fase === "en_vivo"
+                  ? "SEC 06 · Q&A"
+                  : "SEC 04 · EN VIVO"}
           </span>
           <span className="label-meta hidden sm:inline">{scenario.toUpperCase()}</span>
         </div>
@@ -535,7 +540,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
           >
             {mm}:{ss}
           </span>
-          {fase === "en_vivo" || fase === "chaos" ? (
+          {fase === "en_vivo" ? (
             <span className="label-meta hidden md:inline">
               PREGUNTA {Math.min(preguntasDelJurado, TURNOS_TOTALES)}/{TURNOS_TOTALES}
             </span>
@@ -696,17 +701,17 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
               <>
                 <Button
                   size="lg"
-                  onClick={() => void empezarQa()}
+                  onClick={() => void terminarExposicion()}
                   disabled={pensando}
                 >
-                  {pensando ? "El jurado está pensando…" : "Terminé, que pregunten →"}
+                  {pensando ? "Preparando…" : "Terminé mi presentación →"}
                 </Button>
                 <p className="text-center font-mono text-[11px] tracking-[0.12em] text-ink-muted uppercase">
                   EL JURADO ESCUCHA EN SILENCIO
                 </p>
               </>
             )}
-            {(fase === "en_vivo" || fase === "chaos") && (
+            {(fase === "en_vivo" || fase === "chaos" || fase === "esperando_chaos") && (
               <>
                 {cerroElJurado.current && (
                   <p className="border-l-2 border-teal bg-teal-dim/15 px-4 py-2.5 text-[14px] leading-relaxed text-ink">
