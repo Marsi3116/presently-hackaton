@@ -125,6 +125,16 @@ sin perder la sesión: mismo jurado, mismo Red Team report, mismo Chaos Event.
 **En modo texto**, escribes lo que dirías. Mismo jurado, mismas preguntas,
 mismo análisis.
 
+### La exposición y el Q&A son dos momentos distintos
+
+Al empezar, estás en **exposición**: el jurado escucha y **no interrumpe**.
+Presenta completo, como lo harías de verdad. Debajo del avatar vas viendo tu
+ritmo en palabras por minuto, tus muletillas y tus pausas largas.
+
+Cuando terminas, aprietas **`Terminé, que pregunten →`** y ahí empieza el
+**Q&A**: el jurado abre con la pregunta de mayor riesgo de tu Red Team report
+y a partir de ahí improvisa según lo que respondas.
+
 Lo que ves en pantalla:
 
 - **El cronómetro**, arriba. Se pone rojo al pasar tu duración objetivo.

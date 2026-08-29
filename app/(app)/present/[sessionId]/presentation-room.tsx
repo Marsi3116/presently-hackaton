@@ -142,26 +142,96 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
    * transcripcion, pero no interrumpe. Antes preguntaba desde el primer
    * segundo, que no es como funciona una presentacion real.
    */
-  const empezarQa = useCallback(() => {
+  /**
+   * Pide un turno del jurado a /api/llm y devuelve el texto.
+   *
+   * El endpoint ya guarda la pregunta en Convex, asi que aparece sola en la
+   * transcripcion por reactividad. Devolverla sirve para que en modo voz se
+   * la pasemos a Vapi y la diga.
+   */
+  const pedirTurnoDelJurado = useCallback(
+    async (instruccion: string): Promise<string> => {
+      const res = await fetch("/api/llm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metadata: { sessionId },
+          messages: [{ role: "user", content: instruccion }],
+        }),
+      });
+      if (!res.ok || res.body === null) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let texto = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lineas = buffer.split("\n");
+        buffer = lineas.pop() ?? "";
+        for (const linea of lineas) {
+          if (!linea.startsWith("data: ")) continue;
+          const payload = linea.slice(6).trim();
+          if (payload === "[DONE]") continue;
+          try {
+            const j = JSON.parse(payload) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
+            texto += j.choices?.[0]?.delta?.content ?? "";
+          } catch {
+            // chunk partido entre lecturas; el buffer lo recompone
+          }
+        }
+      }
+      return texto.trim();
+    },
+    [sessionId]
+  );
+
+  /**
+   * Cierra la exposicion y abre el Q&A.
+   *
+   * La primera pregunta se pide explicitamente en vez de esperar a que el
+   * modelo se dispare solo: con Vapi eso dependia de que el trigger llegara,
+   * y en modo texto no habia ningun Vapi, asi que no pasaba nada y el
+   * cronometro seguia corriendo sin que nadie preguntara.
+   */
+  const empezarQa = useCallback(async () => {
     setFase("en_vivo");
     setJuryState("thinking");
+    setPensando(true);
     void setStatus({ sessionId, status: "qa" }).catch(() => {});
+
     const vapi = vapiRef.current;
-    if (vapi !== null) {
-      vapi.send({ type: "control", control: "unmute-assistant" });
-      // Empuja al jurado a abrir con la pregunta de mayor riesgo del Red Team.
-      vapi.send({
-        type: "add-message",
-        message: {
-          role: "system",
-          content:
-            "El presentador termino su exposicion. Empieza el Q&A ahora con la " +
-            "pregunta de mayor probabilidad y riesgo del Red Team report.",
-        },
-        triggerResponseEnabled: true,
-      });
+    vapi?.send({ type: "control", control: "unmute-assistant" });
+
+    try {
+      const pregunta = await pedirTurnoDelJurado(
+        "El presentador termino su exposicion. Hazle AHORA la primera pregunta " +
+          "del Q&A: la de mayor probabilidad y riesgo del Red Team report. " +
+          "Solo la pregunta, sin saludo ni preambulo."
+      );
+      if (pregunta.length === 0) throw new Error("respuesta vacia");
+
+      if (vapi !== null) {
+        // Se la damos hecha en vez de confiar en que el modelo arranque solo.
+        vapi.send({ type: "say", message: pregunta, interruptionsEnabled: true });
+        setJuryState("speaking");
+      } else {
+        setJuryState("listening");
+      }
+    } catch (e) {
+      console.error("[present] no se pudo abrir el Q&A:", e);
+      setError(
+        "El jurado no pudo formular la primera pregunta. Escribe o di algo y va a responder."
+      );
+      setJuryState("listening");
+    } finally {
+      setPensando(false);
     }
-  }, [sessionId, setStatus]);
+  }, [sessionId, setStatus, pedirTurnoDelJurado]);
 
   // ---- modo voz ----
   const empezarVoz = useCallback(async () => {
@@ -252,54 +322,16 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       text: texto,
       startTimestamp: t,
       endTimestamp: t,
-      phase: chaosDisparado.current ? "qa" : "presentation",
+      phase: fase === "exponiendo" ? "presentation" : "qa",
     }).catch(() => {});
 
     try {
-      const historial = mensajes.map((m) => ({
-        role: m.role === "jury" ? "assistant" : "user",
-        content: m.text,
-      }));
-      const res = await fetch("/api/llm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          metadata: { sessionId },
-          messages: [...historial, { role: "user", content: texto }],
-        }),
-      });
-      if (!res.ok || res.body === null) throw new Error(`HTTP ${res.status}`);
-
-      // El endpoint responde en SSE de OpenAI porque asi lo consume Vapi.
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let respuesta = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lineas = buffer.split("\n");
-        buffer = lineas.pop() ?? "";
-        for (const linea of lineas) {
-          if (!linea.startsWith("data: ")) continue;
-          const payload = linea.slice(6).trim();
-          if (payload === "[DONE]") continue;
-          try {
-            const j = JSON.parse(payload) as {
-              choices?: Array<{ delta?: { content?: string } }>;
-            };
-            respuesta += j.choices?.[0]?.delta?.content ?? "";
-          } catch {
-            // chunk partido entre lecturas; el buffer lo recompone
-          }
-        }
+      const respuesta = await pedirTurnoDelJurado(texto);
+      if (respuesta.length === 0) {
+        setError("El jurado no devolvió respuesta. Reintenta.");
       }
       setJuryState("speaking");
       setTimeout(() => setJuryState("listening"), 900);
-      if (respuesta.trim().length === 0) {
-        setError("El jurado no devolvio respuesta. Reintenta.");
-      }
     } catch (e) {
       console.error("[present/texto]", e);
       setError("No se pudo contactar al jurado. Reintenta.");
@@ -307,7 +339,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     } finally {
       setPensando(false);
     }
-  }, [escrito, pensando, ahora, addTranscript, sessionId, mensajes]);
+  }, [escrito, pensando, ahora, addTranscript, sessionId, fase, pedirTurnoDelJurado]);
 
   const cerrarChaos = useCallback(
     (respuestaEscrita?: string) => {
@@ -577,8 +609,12 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
             )}
             {fase === "exponiendo" && (
               <>
-                <Button size="lg" onClick={empezarQa}>
-                  Terminé, que pregunten &rarr;
+                <Button
+                  size="lg"
+                  onClick={() => void empezarQa()}
+                  disabled={pensando}
+                >
+                  {pensando ? "El jurado está pensando…" : "Terminé, que pregunten →"}
                 </Button>
                 <p className="text-center font-mono text-[11px] tracking-[0.12em] text-ink-muted uppercase">
                   EL JURADO ESCUCHA EN SILENCIO
