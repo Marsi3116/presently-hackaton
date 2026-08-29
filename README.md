@@ -150,6 +150,7 @@ proxy.ts                # middleware de Clerk (en Next 16 se llama proxy)
 | [`docs/08-servicios-y-costos.md`](docs/08-servicios-y-costos.md) | Qué servicio se activa cuándo, su fallback, y el costo por simulación |
 | [`docs/09-rubrica-y-autoevaluacion.md`](docs/09-rubrica-y-autoevaluacion.md) | La rúbrica del hackathon y dónde estamos contra cada criterio |
 | [`docs/10-guion-demo-3min.md`](docs/10-guion-demo-3min.md) | El guion minuto a minuto de la demo, calibrado contra la rúbrica |
+| [`docs/11-descripcion-submission.md`](docs/11-descripcion-submission.md) | Texto listo para pegar en el formulario de entrega |
 | [`DEPLOY.md`](DEPLOY.md) | Desplegar en Vercel + Convex |
 
 ## Diseño
