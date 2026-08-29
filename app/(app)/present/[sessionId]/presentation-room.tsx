@@ -120,8 +120,14 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       });
       vapi.on("error", (e: unknown) => {
         console.error("[vapi]", e);
+        const detalle =
+          typeof e === "object" && e !== null && "errorMsg" in e
+            ? String((e as { errorMsg: unknown }).errorMsg)
+            : "";
         setError(
-          "El sistema de voz fallo. Puede ser falta de creditos o de microfono. Cambia a modo texto para seguir."
+          `Se corto la llamada de voz${detalle ? ": " + detalle : ""}. ` +
+            "Puede ser el microfono, la conexion o el limite de la cuenta. " +
+            "Cambia a modo texto arriba a la derecha para seguir sin voz."
         );
         setFase("error");
       });

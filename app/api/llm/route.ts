@@ -62,12 +62,22 @@ export async function POST(req: Request) {
     void persist(sessionId, "user", ultimo.content);
   }
 
+  // Los errores de la API (429 por rate limit, 5xx del proveedor) NO se lanzan
+  // desde textStream: el AI SDK solo lanza los que cortan la conexion. El
+  // stream termina vacio y hay que enterarse por aca, o el jurado se queda
+  // mudo y Vapi corta la llamada con "custom-llm-llm-failed".
+  let fallo: unknown = null;
+
   const result = streamText({
     model: getModel("main"),
     system: systemParts.join("\n\n"),
     messages: turnos.length > 0 ? turnos : [{ role: "user", content: "Empieza el Q&A." }],
     temperature: 0.7,
     maxOutputTokens: 200,
+    onError: ({ error }) => {
+      fallo = error;
+      console.error("[api/llm] el modelo fallo:", error);
+    },
     onFinish: ({ text }) => {
       if (sessionId !== null && text.trim().length > 0) {
         void persist(sessionId, "jury", text);
@@ -75,8 +85,17 @@ export async function POST(req: Request) {
     },
   });
 
-  return openAiStream(result.textStream);
+  return openAiStream(result.textStream, () => fallo);
 }
+
+/**
+ * Lo que dice el jurado cuando el modelo no responde.
+ *
+ * Tiene que sonar a jurado, no a error de sistema: en una demo en vivo es
+ * preferible que insista de forma generica antes que quedarse en silencio.
+ */
+const RESPUESTA_DE_EMERGENCIA =
+  "Sigo esperando el dato concreto. Dame el numero y como lo calcularon.";
 
 function readSessionId(payload: {
   call?: { assistantOverrides?: { metadata?: Record<string, unknown> } };
@@ -140,16 +159,39 @@ async function loadContext(
           ctx.rubric
       );
     }
+    // El contexto va resumido, no como JSON crudo. Vapi llama a este endpoint
+    // en CADA turno, y la cuenta de OpenAI tiene 30.000 tokens por minuto:
+    // mandar el reporte completo cada vez agota la cuota a mitad de la
+    // conversacion y el jurado se queda mudo.
     if (ctx.redTeam !== null) {
-      bloques.push("\nRED TEAM REPORT:\n" + JSON.stringify(ctx.redTeam));
+      const debilidades = ctx.redTeam.weaknesses
+        .slice(0, 5)
+        .map((w) => `- ${w.slide ?? "s/n"} [${w.severity}] ${w.title}: ${w.description}`)
+        .join("\n");
+      const preguntas = ctx.redTeam.probableQuestions
+        .slice(0, 4)
+        .map((q) => `- (${q.probability}%) ${q.question}`)
+        .join("\n");
+      bloques.push(
+        `\nRED TEAM (score ${ctx.redTeam.readinessScore}/100): ${ctx.redTeam.summary}` +
+          `\n\nDEBILIDADES:\n${debilidades}` +
+          `\n\nPREGUNTAS PREPARADAS:\n${preguntas}`
+      );
     }
     if (ctx.transcript.length > 0) {
-      bloques.push("\nTRANSCRIPCION DE LA PRESENTACION:\n" + ctx.transcript);
+      // Lo ultimo que dijo es lo relevante para repreguntar.
+      bloques.push(
+        "\nLO QUE DIJO EL PRESENTADOR:\n" + recortarFinal(ctx.transcript, 2500)
+      );
     }
     if (ctx.qa.length > 0) {
+      // Solo los ultimos turnos: el historial completo lo manda Vapi aparte.
       bloques.push(
-        "\nQ&A HASTA AHORA:\n" +
-          ctx.qa.map((m) => `${m.role === "jury" ? "JURADO" : "USUARIO"}: ${m.text}`).join("\n")
+        "\nQ&A RECIENTE:\n" +
+          ctx.qa
+            .slice(-6)
+            .map((m) => `${m.role === "jury" ? "JURADO" : "USUARIO"}: ${m.text}`)
+            .join("\n")
       );
     }
     if (ctx.chaosActive) {
@@ -166,6 +208,12 @@ async function loadContext(
   }
 }
 
+/** Se queda con el final: es lo mas reciente y lo que hay que repreguntar. */
+function recortarFinal(texto: string, maxChars: number): string {
+  if (texto.length <= maxChars) return texto;
+  return "[...] " + texto.slice(-maxChars);
+}
+
 async function persist(sessionId: Id<"sessions">, role: "jury" | "user", text: string) {
   try {
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -180,8 +228,16 @@ async function persist(sessionId: Id<"sessions">, role: "jury" | "user", text: s
   }
 }
 
-/** Envuelve el stream de texto en chunks de chat.completion de OpenAI. */
-function openAiStream(textStream: AsyncIterable<string>): Response {
+/**
+ * Envuelve el stream de texto en chunks de chat.completion de OpenAI.
+ *
+ * Garantiza que SIEMPRE salga texto. Un stream vacio es SSE valido, asi que
+ * Vapi lo acepta y despues corta la llamada porque el jurado no dijo nada.
+ */
+function openAiStream(
+  textStream: AsyncIterable<string>,
+  leerFallo: () => unknown
+): Response {
   const id = `chatcmpl-${Date.now()}`;
   const created = Math.floor(Date.now() / 1000);
   const encoder = new TextEncoder();
@@ -198,19 +254,31 @@ function openAiStream(textStream: AsyncIterable<string>): Response {
         choices: [{ index: 0, delta, finish_reason: finish }],
       });
 
+      let emitido = 0;
       try {
         send(chunk({ role: "assistant", content: "" }, null));
         for await (const piece of textStream) {
-          if (piece.length > 0) send(chunk({ content: piece }, null));
+          if (piece.length > 0) {
+            emitido += piece.length;
+            send(chunk({ content: piece }, null));
+          }
         }
-        send(chunk({}, "stop"));
       } catch (error) {
-        console.error("[api/llm] fallo el stream:", error);
-        send(chunk({ content: " Disculpa, se cortó. Repite tu respuesta." }, "stop"));
-      } finally {
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
+        console.error("[api/llm] el stream se corto:", error);
       }
+
+      if (emitido === 0) {
+        const causa = leerFallo();
+        console.error(
+          "[api/llm] respuesta vacia, se usa la de emergencia. causa:",
+          causa instanceof Error ? causa.message : causa
+        );
+        send(chunk({ content: RESPUESTA_DE_EMERGENCIA }, null));
+      }
+
+      send(chunk({}, "stop"));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
     },
   });
 

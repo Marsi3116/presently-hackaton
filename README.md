@@ -5,7 +5,7 @@
 **No practiques tu presentación. Sobrevívela.**
 
 Simulador adversarial de presentaciones.
-Subes tu deck, un red team encuentra lo que no cierra, y un jurado con voz te lo pregunta en vivo hasta romperte.
+Subes tu presentación, un red team encuentra lo que no cierra, y un jurado con voz te lo pregunta en vivo hasta romperte.
 
 `The Next Craft 2026` · Track **Out of the Box**
 
@@ -142,6 +142,7 @@ El sistema completo está en [`docs/03-design-system.md`](docs/03-design-system.
 | [`docs/05-tools-and-credits.md`](docs/05-tools-and-credits.md) | APIs, autenticación, cuotas |
 | [`docs/06-pitch.md`](docs/06-pitch.md) | El pitch |
 | [`docs/07-manual-de-usuario.md`](docs/07-manual-de-usuario.md) | Manual de usuario: el recorrido completo y qué hacer en cada pantalla |
+| [`docs/08-servicios-y-costos.md`](docs/08-servicios-y-costos.md) | Qué servicio se activa cuándo, su fallback, y cuánto cuesta una simulación |
 
 ## Notas
 

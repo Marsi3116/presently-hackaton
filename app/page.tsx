@@ -87,7 +87,7 @@ export default function LandingPage() {
             </div>
 
             <p className="mt-7 max-w-md text-[15px] leading-relaxed text-ink-muted">
-              Subes tu deck. Un red team encuentra lo que no cierra. Después un
+              Subes tu presentación. Un red team encuentra lo que no cierra. Después un
               jurado con voz te lo pregunta en vivo — y a mitad de camino
               aparece un competidor real que no estaba en tus slides.
             </p>
