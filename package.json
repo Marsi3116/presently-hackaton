@@ -10,7 +10,8 @@
     "convex:dev": "convex dev",
     "prompts": "node scripts/build-prompts.mjs",
     "predev": "node scripts/build-prompts.mjs",
-    "prebuild": "node scripts/build-prompts.mjs"
+    "prebuild": "node scripts/build-prompts.mjs",
+    "build:vercel": "convex deploy --cmd \"next build\""
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.114",
