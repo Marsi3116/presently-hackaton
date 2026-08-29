@@ -54,3 +54,6 @@ convex/_generated/ai/
 # Workflow interno de prompting del equipo
 INITIAL_PROMPT.md
 PROMPTING_CHEATSHEET.md
+
+# generado desde prompts/*.md por scripts/build-prompts.mjs
+lib/prompts.generated.ts
