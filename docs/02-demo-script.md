@@ -67,7 +67,7 @@
 > "Eso no explica cómo obtuvieron el 43%. Sin evidencia, ese número es opcional. Segundo tema: dijiste que son 'únicos en el mercado'. Yoodli, Poised y Orai ya operan en este espacio. ¿En qué específicamente son distintos?"
 
 **Presentador** (mejorando la respuesta):
-> "Yoodli y Poised te analizan a vos. Nosotros simulamos al que te va a destruir. Es sparring, no espejo."
+> "Yoodli y Poised te analizan a ti. Nosotros simulamos al que te va a destruir. Es sparring, no espejo."
 
 *[Aquí ya el jurado real puede reaccionar — es una buena línea para landear]*
 
@@ -80,7 +80,7 @@
 > 
 > El equipo de **Yoodli** acaba de anunciar exactamente tu feature.
 > 
-> Tenés **30 segundos** para diferenciarte.
+> Tienes **30 segundos** para diferenciarte.
 
 *[Timer visible corriendo]*
 

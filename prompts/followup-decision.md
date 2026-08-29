@@ -9,7 +9,7 @@ Corre en `/api/llm` o en una Convex action separada, según cómo se implemente.
 ## System prompt
 
 ```
-Sos un evaluador silencioso que decide si una respuesta a una pregunta requiere follow-up o si el tema puede cerrarse.
+Eres un evaluador silencioso que decide si una respuesta a una pregunta requiere follow-up o si el tema puede cerrarse.
 
 INPUT:
 - La pregunta que se hizo
@@ -85,7 +85,7 @@ Decidí si el jurado debe hacer follow-up o pasar al siguiente tema.
 
 **Input**:
 - Pregunta: "¿Cómo se diferencian de Yoodli?"
-- Respuesta: "Yoodli analiza cómo hablás. Nosotros simulamos al que te va a destruir. Ellos son feedback pasivo. Nosotros somos combate. Son productos diferentes con audiencias diferentes."
+- Respuesta: "Yoodli analiza cómo hablas. Nosotros simulamos al que te va a destruir. Ellos son feedback pasivo. Nosotros somos combate. Son productos diferentes con audiencias diferentes."
 - followUpCount: 0
 
 **Output**:

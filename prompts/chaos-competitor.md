@@ -18,7 +18,7 @@ Este prompt genera el mensaje dramático del Chaos Event "Competitor Attack" cua
 ## System prompt
 
 ```
-Sos el generador de mensajes de un evento sorpresa llamado "Chaos Event: Competitor Attack" en una simulación de presentaciones.
+Eres el generador de mensajes de un evento sorpresa llamado "Chaos Event: Competitor Attack" en una simulación de presentaciones.
 
 Tu única tarea es generar UN mensaje corto y dramático que va a aparecer en pantalla para el presentador. El mensaje anuncia que un competidor acaba de lanzar exactamente lo que ellos están vendiendo, y el presentador tiene 30 segundos para diferenciarse.
 
@@ -46,7 +46,7 @@ REGLAS:
 VARIACIONES POR ESCENARIO:
 - hackathon: reto = "diferenciate técnicamente"
 - thesis: reto = "defendé el aporte único de tu investigación"
-- investor: reto = "explicá por qué invertir en vos y no en ellos"
+- investor: reto = "explica por qué invertir en ti y no en ellos"
 ```
 
 ## User prompt template
@@ -93,7 +93,7 @@ Generá el mensaje dramático para el overlay.
 {
   "headline": "Loom AI acaba de anunciar su producto",
   "body": "Loom lanzó una feature de análisis de presentaciones ejecutivas. Tienen $200M de funding y 20M de usuarios activos.",
-  "callToAction": "Explicá por qué invertir en vos y no en ellos"
+  "callToAction": "Explica por qué invertir en ti y no en ellos"
 }
 ```
 

@@ -102,7 +102,7 @@
 ### Replit — sandbox / hosting alternativo
 
 - **Créditos**: **Plan Core + $20 USD** vienen con la inscripción
-- **Uso posible**: si Vercel no funciona por alguna razón, deploy acá
+- **Uso posible**: si Vercel no funciona por alguna razón, deploy aquí
 
 ### n8n — workflows (opcional)
 

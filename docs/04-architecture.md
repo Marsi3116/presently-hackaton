@@ -51,7 +51,7 @@
 
 ### 2. Convex (backend)
 
-Toda la data persistida vive acá. Se usa como:
+Toda la data persistida vive aquí. Se usa como:
 
 - **Base de datos** (documentos)
 - **Storage** para PPT/PDF

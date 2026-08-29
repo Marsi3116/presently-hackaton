@@ -24,7 +24,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Presently",
   description:
-    "Simulador adversarial de presentaciones. No practiques tu presentación: sobrevivila.",
+    "Simulador adversarial de presentaciones. No practiques tu presentación: sobrevívela.",
 };
 
 // La app es dark-only (docs/03-design-system.md). La clase `dark` va fija para

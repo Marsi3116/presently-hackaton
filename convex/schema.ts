@@ -3,7 +3,7 @@
 // Schema de Presently para The Next Craft 2026.
 // Todas las tablas necesarias para el MVP.
 //
-// IMPORTANTE: si necesitás cambiar este schema, aplicá la migración con
+// IMPORTANTE: si necesitas cambiar este schema, aplica la migración con
 // `npx convex dev` y confirmá que los tipos generados en convex/_generated
 // se actualizaron antes de escribir código nuevo.
 
@@ -249,7 +249,7 @@ export default defineSchema({
       })
     ),
     // Los timeline events se leen de la tabla timelineEvents, no se
-    // duplican acá. El reporte solo agrega el rollup.
+    // duplican aquí. El reporte solo agrega el rollup.
     generatedAt: v.number(),
   })
     .index("by_session", ["sessionId"]),

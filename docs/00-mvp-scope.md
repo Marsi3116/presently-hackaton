@@ -1,6 +1,6 @@
 # MVP Scope — Definitivo
 
-Este documento es la fuente de verdad del scope. Si algo no está acá, no se construye durante el hackathon.
+Este documento es la fuente de verdad del scope. Si algo no está aquí, no se construye durante el hackathon.
 
 ## Lo que SÍ construimos
 

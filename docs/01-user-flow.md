@@ -2,7 +2,7 @@
 
 ## Principio general
 
-- **Una acción principal por pantalla**. Nada de "y también podés hacer X".
+- **Una acción principal por pantalla**. Nada de "y también puedes hacer X".
 - **Todo pre-poblado con defaults sensatos**. El usuario NUNCA se queda pensando qué llenar.
 - **La demo salta las primeras 3 pantallas en 30 segundos**. Diseñar para eso.
 
@@ -51,7 +51,7 @@
 
 **Contenido**:
 - Header: "Subir material"
-- Dropzone grande centrada, con hint: "Arrastra tu PPT o PDF, o hacé click"
+- Dropzone grande centrada, con hint: "Arrastra tu PPT o PDF, o haz click"
 - Debajo: "PPT, PPTX, PDF · máx 20 MB"
 - Después de soltar el archivo:
   - Nombre del archivo + tamaño
@@ -95,7 +95,7 @@
 - Secundario: `[ Arreglar antes de presentar ]` (por ahora no hace nada, tooltip: "Próximamente")
 - Primario: `[ Estoy listo, empezar simulación → ]` (redirect a `/present/[sessionId]`)
 
-**Nota**: esta pantalla ya es un producto por sí sola. Si Vapi falla en la demo, con esto solo ya hay algo mostrable. Priorizar polish visual acá.
+**Nota**: esta pantalla ya es un producto por sí sola. Si Vapi falla en la demo, con esto solo ya hay algo mostrable. Priorizar polish visual aquí.
 
 ---
 
@@ -163,7 +163,7 @@
   El equipo de [Competidor Real de Tavily] acaba de anunciar
   exactamente tu feature.
   
-  Tenés 30 segundos para diferenciarte.
+  Tienes 30 segundos para diferenciarte.
   ```
 - Timer grande contando desde 30 seg
 - Botón `[ Empezar respuesta ]` que activa el micro y arranca el timer
@@ -220,7 +220,7 @@
 - 3 recomendaciones concretas, no genéricas
 - Ejemplos:
   - "Prepará la justificación exacta del 43% con: número de empresas, baseline y período de medición."
-  - "Cuando te pregunten sobre metodología, no evadas — usá el marco DEDA (Datos, Ejemplo, Detalle, Aporte)."
+  - "Cuando te pregunten sobre metodología, no evadas — usa el marco DEDA (Datos, Ejemplo, Detalle, Aporte)."
   - "Practicá la respuesta a 'por qué no lo copia Google' — es la pregunta #1 en pitches a inversores."
 
 **CTAs al final**:

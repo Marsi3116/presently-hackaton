@@ -244,7 +244,7 @@ Respetar `prefers-reduced-motion: reduce` — desactivar todo.
 **Sin iconos genéricos**. Preferir:
 - Símbolos técnicos: `▸ ✕ ⚠ ↓ ↑ →`
 - Emojis SOLO en: Chaos Event (🔥), timeline dots (🟢🟡🔴)
-- Si necesitás iconos de UI, `lucide-react` con `strokeWidth: 1.5` y color `--ink-muted`
+- Si necesitas iconos de UI, `lucide-react` con `strokeWidth: 1.5` y color `--ink-muted`
 
 ## Tailwind config
 
@@ -308,6 +308,21 @@ const display = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' }
 const body = Inter({ subsets: ['latin'], variable: '--font-body' });
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 ```
+
+## Copy
+
+**Español neutro / peruano. Tuteo, nunca voseo.**
+
+| Sí | No |
+|----|----|
+| eres, tienes, puedes | sos, tenés, podés |
+| dices, sabes, evalúas | decís, sabés, evaluás |
+| elige, usa, responde, devuelve | elegí, usá, respondé, devolvé |
+| aquí, ustedes | acá, vosotros |
+
+Aplica a la UI, a los docs y sobre todo a `prompts/`: esos prompts definen cómo **habla** el jurado por voz, así que el voseo ahí sale por los parlantes.
+
+Tono táctico y corto, sin verbosidad. "Nueva presentación", no "Comenzar una nueva sesión de práctica".
 
 ## Antitesis — lo que NO hacer
 

@@ -2,10 +2,10 @@
 
 # Presently
 
-**No practiques tu presentación. Sobrevivila.**
+**No practiques tu presentación. Sobrevívela.**
 
 Simulador adversarial de presentaciones.
-Subís tu deck, un red team encuentra lo que no cierra, y un jurado con voz te lo pregunta en vivo hasta romperte.
+Subes tu deck, un red team encuentra lo que no cierra, y un jurado con voz te lo pregunta en vivo hasta romperte.
 
 `The Next Craft 2026` · Track **Out of the Box**
 
@@ -18,18 +18,18 @@ Subís tu deck, un red team encuentra lo que no cierra, y un jurado con voz te l
 Ninguna presentación falla porque PowerPoint tenía la fuente equivocada.
 Fallan cuando alguien hace **la pregunta que no estabas preparado para responder**.
 
-Yoodli, Poised y Orai te analizan a vos: muletillas, ritmo, contacto visual.
+Yoodli, Poised y Orai te analizan a ti: muletillas, ritmo, contacto visual.
 Ninguna simula al que te va a destruir.
 
 ## Cómo funciona
 
 | | Etapa | Qué pasa |
 |---|---|---|
-| `01` | **Upload** | Subís el PPT o PDF. Se extrae el texto en el backend. |
+| `01` | **Upload** | Subes el PPT o PDF. Se extrae el texto en el backend. |
 | `02` | **Red Team** | Un LLM analiza el contenido y devuelve debilidades citadas por slide, un *Presentation Readiness Score* y las preguntas más probables con su porcentaje. |
-| `03` | **Presentación** | Presentás en vivo. Transcripción en tiempo real, timer, y el jurado escuchando. |
-| `04` | **Q&A adversarial** | El jurado pregunta con voz, basándose en el Red Team y en lo que acabás de decir. Si respondés flojo, repregunta. |
-| `05` | **Chaos Event** | A mitad de camino aparece un competidor **real**, buscado en vivo. Tenés 30 segundos para diferenciarte. |
+| `03` | **Presentación** | Presentas en vivo. Transcripción en tiempo real, timer, y el jurado escuchando. |
+| `04` | **Q&A adversarial** | El jurado pregunta con voz, basándose en el Red Team y en lo que acabas de decir. Si respondes flojo, repregunta. |
+| `05` | **Chaos Event** | A mitad de camino aparece un competidor **real**, buscado en vivo. Tienes 30 segundos para diferenciarte. |
 | `06` | **After Action Report** | Timeline de la sesión con los momentos críticos, score global y tres recomendaciones concretas. |
 
 ## Stack
@@ -46,13 +46,13 @@ Ninguna simula al que te va a destruir.
 
 ## Arrancar
 
-Necesitás **Node 20.16+** (recomendado 22, ver [Notas](#notas)).
+Necesitas **Node 20.16+** (recomendado 22, ver [Notas](#notas)).
 
 ```bash
 git clone <repo> && cd presently
 npm install
 
-cp .env.example .env.local   # completá las keys
+cp .env.example .env.local   # completa las keys
 
 npx convex dev               # terminal 1 — crea el proyecto y aplica el schema
 npm run dev                  # terminal 2 — http://localhost:3000
@@ -75,7 +75,7 @@ TAVILY_API_KEY
 
 ### Dos pasos de setup que no son obvios
 
-1. **JWT template en Clerk.** Creá uno llamado exactamente `convex` (claim `aud: "convex"`).
+1. **JWT template en Clerk.** Crea uno llamado exactamente `convex` (claim `aud: "convex"`).
    Sin eso, Clerk no emite tokens que Convex acepte y la app queda **silenciosamente deslogueada** del lado del backend, sin ningún error visible.
 
 2. **`CLERK_JWT_ISSUER_DOMAIN` va en Convex, no en `.env.local`.**

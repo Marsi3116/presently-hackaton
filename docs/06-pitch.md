@@ -18,9 +18,9 @@
 
 No decir "existen otras herramientas". Nombrar:
 
-> "Yoodli, Poised y Orai te analizan a vos. Ninguna simula al que te va a destruir."
+> "Yoodli, Poised y Orai te analizan a ti. Ninguna simula al que te va a destruir."
 
-Nombres reales hacen creíble que investigaste el mercado. Y contrastar el "te analizan a vos" con "simulamos al que te destruye" es memorable.
+Nombres reales hacen creíble que investigaste el mercado. Y contrastar el "te analizan a ti" con "simulamos al que te destruye" es memorable.
 
 ### Táctica 2 — Meta-move de cierre
 
@@ -29,7 +29,7 @@ Al final del pitch, esta línea:
 > "Todo lo que ustedes acaban de ver — el análisis, el jurado, el chaos — lo construimos en 12 horas. Y lo estamos usando ahora mismo para preparar el pitch que les estamos dando."
 
 Esto hace tres cosas:
-1. Prueba que la app funciona (la usaste vos)
+1. Prueba que la app funciona (la usaste tú)
 2. Muestra técnica (12h, no meses)
 3. Cierra con humor y cercanía (auto-referencia)
 
@@ -49,7 +49,7 @@ Si en el ensayo pueden generar métricas reales (aunque sean modestas), usarlas:
 
 Números sin fuente son ruido. Números con fuente incluso pequeña son poderosos.
 
-**IMPORTANTE**: nunca inventar números. Si no los tenés, decir "en beta" o "en construcción".
+**IMPORTANTE**: nunca inventar números. Si no los tienes, decir "en beta" o "en construcción".
 
 ## Estructura del pitch de 3 min
 
@@ -78,7 +78,7 @@ Este es el pitch para el jurado del hackathon, distinto al guion de la demo (que
 
 ### "¿Qué pasa si el LLM se equivoca en el Red Team?"
 
-> "Puede pasar. Por eso el usuario tiene el botón 'Arreglar antes de presentar' para revisar el análisis antes de continuar. Pero además, incluso un análisis 80% correcto es 80% más de lo que hoy tenés antes de una presentación."
+> "Puede pasar. Por eso el usuario tiene el botón 'Arreglar antes de presentar' para revisar el análisis antes de continuar. Pero además, incluso un análisis 80% correcto es 80% más de lo que hoy tienes antes de una presentación."
 
 ### "¿Por qué en 12 horas y no en 2 meses?"
 
