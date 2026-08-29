@@ -18,6 +18,8 @@ import { analyzeSpeech } from "@/lib/speech-metrics";
 const CHAOS_SEGUNDOS = 30;
 /** Turnos del jurado antes del Chaos Event (docs/00-mvp-scope.md). */
 const TURNOS_ANTES_DEL_CHAOS = 3;
+/** Preguntas totales del Q&A antes de que el jurado cierre. */
+const TURNOS_TOTALES = 6;
 
 type Fase =
   | "listo"
@@ -69,6 +71,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const vapiRef = useRef<VapiClient | null>(null);
   const chaosDisparado = useRef(false);
   const chaosMostrado = useRef(false);
+  const cerroElJurado = useRef(false);
   const inicioRef = useRef<number>(0);
   const chaosInicioRef = useRef<number>(0);
 
@@ -119,12 +122,15 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     if (chaosMostrado.current) return;
     if (chaos === null || chaos === undefined) return;
     if (fase !== "en_vivo") return;
+    // Esperar a que el jurado termine su turno: irrumpir a mitad de una
+    // pregunta dejaba la frase cortada y sin respuesta posible.
+    if (juryState === "speaking" || juryState === "thinking") return;
     chaosMostrado.current = true;
     chaosInicioRef.current = Date.now();
     setFase("chaos");
     void setStatus({ sessionId, status: "chaos" }).catch(() => {});
     vapiRef.current?.setMuted(true);
-  }, [chaos, fase, sessionId, setStatus]);
+  }, [chaos, fase, juryState, sessionId, setStatus]);
 
   // ---- arranque comun a los dos modos ----
   const arrancar = useCallback(() => {
@@ -136,13 +142,6 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   }, [sessionId, setStatus]);
 
   /**
-   * Cierra la exposicion y abre el Q&A.
-   *
-   * Durante la exposicion el jurado esta muteado en Vapi: escucha y acumula
-   * transcripcion, pero no interrumpe. Antes preguntaba desde el primer
-   * segundo, que no es como funciona una presentacion real.
-   */
-  /**
    * Pide un turno del jurado a /api/llm y devuelve el texto.
    *
    * El endpoint ya guarda la pregunta en Convex, asi que aparece sola en la
@@ -150,13 +149,16 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
    * la pasemos a Vapi y la diga.
    */
   const pedirTurnoDelJurado = useCallback(
-    async (instruccion: string): Promise<string> => {
+    async (texto: string, interno = false): Promise<string> => {
       const res = await fetch("/api/llm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           metadata: { sessionId },
-          messages: [{ role: "user", content: instruccion }],
+          // Una instruccion nuestra va como "system": el endpoint solo
+          // persiste mensajes de "user", y mandarla como user la mostraba en
+          // la transcripcion como si el presentador la hubiera dicho.
+          messages: [{ role: interno ? "system" : "user", content: texto }],
         }),
       });
       if (!res.ok || res.body === null) throw new Error(`HTTP ${res.status}`);
@@ -164,7 +166,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let texto = "";
+      let salida = "";
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -179,13 +181,13 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
             const j = JSON.parse(payload) as {
               choices?: Array<{ delta?: { content?: string } }>;
             };
-            texto += j.choices?.[0]?.delta?.content ?? "";
+            salida += j.choices?.[0]?.delta?.content ?? "";
           } catch {
             // chunk partido entre lecturas; el buffer lo recompone
           }
         }
       }
-      return texto.trim();
+      return salida.trim();
     },
     [sessionId]
   );
@@ -211,7 +213,8 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       const pregunta = await pedirTurnoDelJurado(
         "El presentador termino su exposicion. Hazle AHORA la primera pregunta " +
           "del Q&A: la de mayor probabilidad y riesgo del Red Team report. " +
-          "Solo la pregunta, sin saludo ni preambulo."
+          "Solo la pregunta, sin saludo ni preambulo.",
+        true
       );
       if (pregunta.length === 0) throw new Error("respuesta vacia");
 
@@ -377,6 +380,38 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     [mensajes, sessionId, submitChaos, setStatus]
   );
 
+  /**
+   * El jurado cierra el Q&A.
+   *
+   * Sin esto las preguntas eran infinitas: nada le decia al presentador que
+   * habia terminado, y la sesion quedaba abierta hasta que alguien cortaba.
+   */
+  const cerrarQa = useCallback(async () => {
+    if (cerroElJurado.current) return;
+    cerroElJurado.current = true;
+    setJuryState("thinking");
+    try {
+      const cierre = await pedirTurnoDelJurado(
+        "Ya hiciste todas tus preguntas. Cierra el Q&A ahora en UNA sola frase: " +
+          "di si el pitch te convencio o no y por que, sin hacer otra pregunta.",
+        true
+      );
+      vapiRef.current?.send({ type: "say", message: cierre });
+      setJuryState("speaking");
+    } catch (e) {
+      console.error("[present] no se pudo cerrar el Q&A:", e);
+    }
+  }, [pedirTurnoDelJurado]);
+
+  // Se cierra cuando el jurado llega a su cupo de preguntas, y el chaos ya paso.
+  useEffect(() => {
+    if (fase !== "en_vivo") return;
+    if (cerroElJurado.current) return;
+    if (preguntasDelJurado < TURNOS_TOTALES) return;
+    if (!chaosMostrado.current) return;
+    void cerrarQa();
+  }, [fase, preguntasDelJurado, cerrarQa]);
+
   const terminar = useCallback(async () => {
     vapiRef.current?.stop();
     setFase("cerrando");
@@ -478,9 +513,15 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
           >
             {mm}:{ss}
           </span>
-          <span className="label-meta hidden md:inline">
-            OBJETIVO {session?.duration ?? 3} MIN
-          </span>
+          {fase === "en_vivo" || fase === "chaos" ? (
+            <span className="label-meta hidden md:inline">
+              PREGUNTA {Math.min(preguntasDelJurado, TURNOS_TOTALES)}/{TURNOS_TOTALES}
+            </span>
+          ) : (
+            <span className="label-meta hidden md:inline">
+              OBJETIVO {session?.duration ?? 3} MIN
+            </span>
+          )}
         </div>
       </header>
 
@@ -630,9 +671,21 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
               </>
             )}
             {(fase === "en_vivo" || fase === "chaos") && (
-              <Button size="lg" variant="outline" onClick={() => void terminar()}>
-                Terminar y generar reporte
-              </Button>
+              <>
+                {cerroElJurado.current && (
+                  <p className="border-l-2 border-teal bg-teal-dim/15 px-4 py-2.5 text-[14px] leading-relaxed text-ink">
+                    El jurado terminó sus preguntas. Genera el reporte cuando
+                    quieras.
+                  </p>
+                )}
+                <Button
+                  size="lg"
+                  variant={cerroElJurado.current ? "default" : "outline"}
+                  onClick={() => void terminar()}
+                >
+                  Terminar y generar reporte
+                </Button>
+              </>
             )}
             {fase === "cerrando" && (
               <Button size="lg" disabled>

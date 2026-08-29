@@ -151,6 +151,10 @@ Lo que ves en pantalla:
 El jurado no espera a que termines para armar sus preguntas: ya leyó el Red
 Team report antes de que abrieras la boca.
 
+**El Q&A tiene un final.** Son seis preguntas. Arriba a la derecha ves en cuál
+vas (`PREGUNTA 3/6`), y cuando termina, el jurado cierra diciéndote si el pitch
+lo convenció o no. Ahí ya puedes generar el reporte.
+
 ### 7. El Chaos Event
 
 **Esto es lo que más sorprende, así que léelo antes de que te pase.**
