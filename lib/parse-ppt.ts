@@ -1,5 +1,7 @@
 import "server-only";
 
+import { ensurePdfGlobals } from "./pdf-globals";
+
 // Extraccion de texto de PPT/PDF. Corre SOLO en el runtime de Node de Next
 // (ver serverExternalPackages en next.config.ts), no en el de Convex: pdfjs
 // necesita worker y filesystem.
@@ -33,6 +35,9 @@ export async function extractText(
 }
 
 async function fromPdf(buffer: Buffer): Promise<Extraction> {
+  // Antes del import: pdf.mjs crea un DOMMatrix a nivel de modulo y sin el
+  // polyfill el import falla entero.
+  ensurePdfGlobals();
   // pdf-parse v2 expone la clase PDFParse, no la funcion `pdf` de la v1.
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
@@ -45,16 +50,57 @@ async function fromPdf(buffer: Buffer): Promise<Extraction> {
   }
 }
 
+type OfficeNode = {
+  type?: string;
+  text?: unknown;
+  children?: OfficeNode[];
+  metadata?: { slideNumber?: number };
+};
+
 async function fromOffice(buffer: Buffer): Promise<Extraction> {
-  // officeparser v7 devuelve un AST; el texto plano sale de ast.to("text").
+  // officeparser arrastra pdfjs 6, con el mismo problema.
+  ensurePdfGlobals();
   const { parseOffice } = await import("officeparser");
   const ast = await parseOffice(buffer);
-  const text = normalize((await ast.to("text")).value);
-  const pages = ast.metadata?.pages;
-  return {
-    text,
-    unitCount: typeof pages === "number" ? pages : estimateBlocks(text),
-  };
+
+  // ast.to("text") aplana todo y pierde los limites de slide, ademas de meter
+  // marcadores "[Image: foo.png]" que solo son ruido para el LLM. Recorremos
+  // el AST para numerar cada slide: el Red Team tiene que poder citar
+  // "Slide 12" igual que cita paginas en un PDF.
+  const nodos = (ast as unknown as { content?: OfficeNode[] }).content ?? [];
+  const slides = nodos.filter((n) => n.type === "slide");
+
+  if (slides.length > 0) {
+    const bloques = slides.map((slide, i) => {
+      const n = slide.metadata?.slideNumber ?? i + 1;
+      const cuerpo = flattenText(slide).trim();
+      return `[Slide ${n}]\n${cuerpo}`;
+    });
+    return { text: collapse(bloques.join("\n\n")), unitCount: slides.length };
+  }
+
+  // DOCX y demas: no hay slides, cae al texto plano.
+  const texto = normalize((await ast.to("text")).value);
+  return { text: texto, unitCount: estimateBlocks(texto) };
+}
+
+/**
+ * Junta el texto de un nodo, salteando imagenes.
+ *
+ * Un nodo con hijos ya trae en `text` la concatenacion de ellos, asi que tomar
+ * ambos duplicaba todo ("BIG DATA BIG D A T A"). Solo las hojas aportan texto.
+ */
+function flattenText(node: OfficeNode): string {
+  if (node.type === "image") return "";
+
+  const hijos = node.children ?? [];
+  if (hijos.length > 0) {
+    return hijos
+      .map(flattenText)
+      .filter((t) => t.length > 0)
+      .join("\n");
+  }
+  return typeof node.text === "string" ? node.text.trim() : "";
 }
 
 /** Colapsa el ruido de layout que dejan los extractores. */
