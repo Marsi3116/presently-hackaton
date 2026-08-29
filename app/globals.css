@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================================================
+   Presently — design system (docs/03-design-system.md)
+   La app es dark-only: se usa mientras alguien presenta. No hay light mode,
+   asi que los tokens viven directo en :root en vez de en .dark.
+   ========================================================================== */
+
+:root {
+  /* --- base --- */
+  --bg: #0e0d0b;
+  --bg-elevated: #1a1815;
+  --bg-input: #23201c;
+  --hairline: #3a3730;
+  --hairline-strong: #5c574d;
+
+  /* --- tinta --- */
+  --ink: #efead8;
+  --ink-soft: #c4bfad;
+  --ink-muted: #8b8474;
+
+  /* --- acentos --- */
+  --crimson: #d63b32;
+  --crimson-dim: #8a2723;
+  --crimson-glow: rgb(214 59 50 / 0.15);
+  --teal: #4a9e97;
+  --teal-dim: #2e5e5a;
+  --amber: #e5a03a;
+  --amber-dim: #b87a1e;
+  --olive: #7a8b5a;
+
+  /* --- radius: cero en contenedores, 2px maximo en controles --- */
+  --radius: 2px;
+
+  /* --- mapeo de los tokens semanticos de shadcn a la paleta --- */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--bg-elevated);
+  --card-foreground: var(--ink);
+  --popover: var(--bg-elevated);
+  --popover-foreground: var(--ink);
+  --primary: var(--crimson);
+  --primary-foreground: var(--ink);
+  --secondary: var(--bg-input);
+  --secondary-foreground: var(--ink);
+  --muted: var(--bg-input);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--bg-input);
+  --accent-foreground: var(--ink);
+  --destructive: var(--crimson);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--hairline-strong);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-input: var(--bg-input);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-crimson: var(--crimson);
+  --color-crimson-dim: var(--crimson-dim);
+  --color-teal: var(--teal);
+  --color-teal-dim: var(--teal-dim);
+  --color-amber: var(--amber);
+  --color-amber-dim: var(--amber-dim);
+  --color-olive: var(--olive);
+
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-display);
+
+  /* shadcn semanticos */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Todas las escalas colapsan a 0/2px: el radius grande lee "consumer app" */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    font-size: 15px;
+  }
+
+  ::selection {
+    background: var(--crimson-dim);
+    color: var(--ink);
+  }
+
+  /* Los numeros que cambian en vivo (timers, scores) no deben bailar */
+  [data-tabular] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Eyebrow: "SEC 01 · UPLOAD". El marcador visual del dossier tecnico. */
+  .label-sec {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-crimson;
+  }
+
+  .label-meta {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-ink-muted;
+  }
+
+  /* Titulos display: siempre tracking negativo */
+  .display {
+    @apply font-display tracking-[-0.02em];
+  }
+
+  /* Card del dossier: sin radius, hairline, y barra de color opcional */
+  .panel {
+    @apply border border-hairline bg-bg-elevated p-6;
+  }
+  .panel-critical {
+    @apply border-t-[3px] border-t-crimson;
+  }
+  .panel-ok {
+    @apply border-l-4 border-l-teal;
+  }
+  .panel-warn {
+    @apply border-l-4 border-l-amber;
+  }
+
+  /* Retícula de fondo: da la textura "mission control" sin costar nada */
+  .grid-field {
+    background-image:
+      linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+    background-size: 64px 64px;
+    opacity: 0.28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
