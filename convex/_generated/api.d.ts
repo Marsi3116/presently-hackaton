@@ -8,7 +8,11 @@
  * @module
  */
 
+import type * as actions from "../actions.js";
+import type * as chaos from "../chaos.js";
+import type * as finalReport from "../finalReport.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as qa from "../qa.js";
 import type * as redTeam from "../redTeam.js";
 import type * as reports from "../reports.js";
 import type * as sessions from "../sessions.js";
@@ -21,7 +25,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  actions: typeof actions;
+  chaos: typeof chaos;
+  finalReport: typeof finalReport;
   "lib/auth": typeof lib_auth;
+  qa: typeof qa;
   redTeam: typeof redTeam;
   reports: typeof reports;
   sessions: typeof sessions;
