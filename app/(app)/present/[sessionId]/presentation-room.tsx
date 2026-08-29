@@ -66,6 +66,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const [enVivo, setEnVivo] = useState("");
   const [escrito, setEscrito] = useState("");
   const [pensando, setPensando] = useState(false);
+  const [chaosRespondido, setChaosRespondido] = useState<boolean | null>(null);
 
   type VapiClient = InstanceType<typeof import("@vapi-ai/web").default>;
   const vapiRef = useRef<VapiClient | null>(null);
@@ -74,6 +75,15 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const cerroElJurado = useRef(false);
   const inicioRef = useRef<number>(0);
   const chaosInicioRef = useRef<number>(0);
+  /**
+   * La fase, para los callbacks de Vapi.
+   *
+   * Los handlers se registran una sola vez al conectar, asi que capturan el
+   * valor de `fase` de ese momento y nunca lo actualizan. Sin este ref todo
+   * el Q&A quedaba etiquetado como "presentation" y contaminaba las metricas
+   * de habla, que solo deben medir la exposicion.
+   */
+  const faseRef = useRef<"presentation" | "qa" | "chaos">("presentation");
 
   const transcripts = useQuery(api.transcripts.listBySession, { sessionId }) ?? [];
   const metricas = analyzeSpeech(
@@ -90,6 +100,11 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
   const jurado = JURADOS[scenario];
   const enCurso =
     fase === "exponiendo" || fase === "en_vivo" || fase === "chaos";
+
+  useEffect(() => {
+    faseRef.current =
+      fase === "exponiendo" ? "presentation" : fase === "chaos" ? "chaos" : "qa";
+  }, [fase]);
 
   // ---- cronometro ----
   useEffect(() => {
@@ -129,7 +144,10 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
     chaosInicioRef.current = Date.now();
     setFase("chaos");
     void setStatus({ sessionId, status: "chaos" }).catch(() => {});
-    vapiRef.current?.setMuted(true);
+    // mute-assistant calla al JURADO. setMuted() apaga el microfono del
+    // usuario, que era justo lo contrario: durante los 30 segundos del chaos
+    // no se transcribia nada de lo que respondia.
+    vapiRef.current?.send({ type: "control", control: "mute-assistant" });
   }, [chaos, fase, juryState, sessionId, setStatus]);
 
   // ---- arranque comun a los dos modos ----
@@ -302,7 +320,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
             text: texto,
             startTimestamp: ahora(),
             endTimestamp: ahora(),
-            phase: chaosDisparado.current ? "qa" : "presentation",
+            phase: faseRef.current,
           }).catch(() => {});
         }
       });
@@ -333,7 +351,7 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       text: texto,
       startTimestamp: t,
       endTimestamp: t,
-      phase: fase === "exponiendo" ? "presentation" : "qa",
+      phase: faseRef.current,
     }).catch(() => {});
 
     try {
@@ -358,15 +376,19 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
         1,
         Math.round((Date.now() - chaosInicioRef.current) / 1000)
       );
-      // Todo lo que dijo mientras el overlay estuvo arriba. En voz llega por
-      // transcripts; en texto lo escribe en el propio overlay.
-      const hablado = mensajes
-        .filter((m) => m.role === "user" && m.createdAt >= chaosInicioRef.current)
-        .map((m) => m.text)
+      // De transcripts y no de qaMessages: mientras el jurado esta muteado
+      // Vapi no llama a /api/llm, que es quien escribe qaMessages, asi que
+      // ahi no queda nada. El transcript en cambio se guarda siempre.
+      const desde = Math.max(0, Math.floor((chaosInicioRef.current - inicioRef.current) / 1000) - 2);
+      const hablado = transcripts
+        .filter((t) => t.startTimestamp >= desde)
+        .sort((a, b) => a.startTimestamp - b.startTimestamp)
+        .map((t) => t.text)
         .join(" ")
         .trim();
       const respuesta = (respuestaEscrita ?? "").trim() || hablado;
 
+      setChaosRespondido(respuesta.length > 0);
       void submitChaos({
         sessionId,
         userResponse:
@@ -375,9 +397,9 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
       }).catch(() => {});
       setFase("en_vivo");
       void setStatus({ sessionId, status: "qa" }).catch(() => {});
-      vapiRef.current?.setMuted(false);
+      vapiRef.current?.send({ type: "control", control: "unmute-assistant" });
     },
-    [mensajes, sessionId, submitChaos, setStatus]
+    [transcripts, sessionId, submitChaos, setStatus]
   );
 
   /**
@@ -623,6 +645,20 @@ export function PresentationRoom({ sessionId }: { sessionId: Id<"sessions"> }) {
                 <dd className="label-meta mt-0.5">&gt;2 SEG</dd>
               </div>
             </dl>
+          )}
+
+          {chaosRespondido !== null && (
+            <p
+              className={`w-full border-l-2 px-4 py-2.5 text-[13px] leading-relaxed ${
+                chaosRespondido
+                  ? "border-teal bg-teal-dim/15 text-ink-soft"
+                  : "border-amber bg-amber-dim/15 text-ink-soft"
+              }`}
+            >
+              {chaosRespondido
+                ? "Tu respuesta al Chaos Event quedó registrada."
+                : "No se registró respuesta al Chaos Event. Va a contar como no respondido en el reporte."}
+            </p>
           )}
 
           {error !== null && (
