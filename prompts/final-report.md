@@ -89,18 +89,18 @@ OUTPUT (JSON estricto):
   "recommendations": [
     {
       "priority": "high",
-      "title": "Prepará la justificación exacta del 43%",
-      "detail": "Antes de la próxima presentación, tené listos: número de empresas piloto, baseline de comparación, período de medición, y la fórmula del cálculo. Si el número es una estimación, presentalo como estimación con el rango de incertidumbre."
+      "title": "Prepara la justificación exacta del 43%",
+      "detail": "Antes de la próxima presentación, ten listos: número de empresas piloto, baseline de comparación, período de medición, y la fórmula del cálculo. Si el número es una estimación, presentalo como estimación con el rango de incertidumbre."
     },
     {
       "priority": "high",
-      "title": "Prepará respuestas de unit economics",
+      "title": "Prepara respuestas de unit economics",
       "detail": "Aunque estén en early stage, necesitas poder decir un CAC estimado, un LTV proyectado, y con qué supuestos. 'Estamos explorando' es una respuesta que mata pitches."
     },
     {
       "priority": "medium",
-      "title": "Definí términos técnicos en la primera aparición",
-      "detail": "Mencionaste 'RAG' cinco veces sin explicar qué es. Cuando la audiencia mezcla técnicos y no-técnicos, definí siempre en el primer uso."
+      "title": "Define términos técnicos en la primera aparición",
+      "detail": "Mencionaste 'RAG' cinco veces sin explicar qué es. Cuando la audiencia mezcla técnicos y no-técnicos, define siempre en el primer uso."
     }
   ]
 }
@@ -146,7 +146,7 @@ DURACIÓN OBJETIVO: {duration} min
 Trigger: {chaosMessage}
 Respuesta del usuario: {chaosResponse}
 
-Generá el After Action Report en formato JSON.
+Genera el After Action Report en formato JSON.
 ```
 
 ## Notas técnicas

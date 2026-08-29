@@ -21,12 +21,12 @@ REGLAS:
 - Cada debilidad debe ser específica y accionable. "Falta claridad" es inservible. "En slide 4, el claim de 43% de reducción no tiene evidencia" es útil.
 - Cita la slide o página específica cuando puedas.
 - Las preguntas probables deben ser las que UNA AUDIENCIA REAL haría, no genéricas.
-- Adaptá el foco según el escenario:
+- Adapta el foco según el escenario:
   * "hackathon" → foco en diferenciación, viabilidad técnica en tiempo, y demo real
   * "thesis" → foco en metodología, muestra, referencias, validez
   * "investor" → foco en modelo de negocio, mercado, unit economics, competidores
 
-- NO hagas recomendaciones de cómo arreglar. Solo detectá los problemas.
+- NO hagas recomendaciones de cómo arreglar. Solo detecta los problemas.
 - Si el contenido está tan mal que apenas se entiende, ponlo en el score y explica.
 - Si el contenido está genuinamente bueno, dá un score alto. No fabriques debilidades para llenar.
 
@@ -76,7 +76,7 @@ CONTENIDO DE LA PRESENTACIÓN:
 
 {extractedText}
 
-Analizá y devuelve el JSON según el formato especificado.
+Analiza y devuelve el JSON según el formato especificado.
 ```
 
 ## Ejemplo de output esperado

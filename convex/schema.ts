@@ -4,7 +4,7 @@
 // Todas las tablas necesarias para el MVP.
 //
 // IMPORTANTE: si necesitas cambiar este schema, aplica la migración con
-// `npx convex dev` y confirmá que los tipos generados en convex/_generated
+// `npx convex dev` y confirma que los tipos generados en convex/_generated
 // se actualizaron antes de escribir código nuevo.
 
 import { defineSchema, defineTable } from "convex/server";

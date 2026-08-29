@@ -65,7 +65,7 @@
 **Acciones**:
 - Upload → Convex Storage → dispara action `analyzeSubmission` → cuando termina, redirect a `/red-team/[sessionId]`
 
-**Nota técnica**: aunque el análisis del Red Team tarde 15-30 seg, los mensajes rotantes hacen que se sienta rápido y generan anticipación. Cambiá el mensaje cada 3 seg.
+**Nota técnica**: aunque el análisis del Red Team tarde 15-30 seg, los mensajes rotantes hacen que se sienta rápido y generan anticipación. Cambia el mensaje cada 3 seg.
 
 ---
 
@@ -219,9 +219,9 @@
 **Sección 3 — Recomendaciones** (abajo):
 - 3 recomendaciones concretas, no genéricas
 - Ejemplos:
-  - "Prepará la justificación exacta del 43% con: número de empresas, baseline y período de medición."
+  - "Prepara la justificación exacta del 43% con: número de empresas, baseline y período de medición."
   - "Cuando te pregunten sobre metodología, no evadas — usa el marco DEDA (Datos, Ejemplo, Detalle, Aporte)."
-  - "Practicá la respuesta a 'por qué no lo copia Google' — es la pregunta #1 en pitches a inversores."
+  - "Practica la respuesta a 'por qué no lo copia Google' — es la pregunta #1 en pitches a inversores."
 
 **CTAs al final**:
 - Primario: `[ Practicar de nuevo → ]` (crea nueva session, va a `/new`)

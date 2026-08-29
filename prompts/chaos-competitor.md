@@ -45,7 +45,7 @@ REGLAS:
 
 VARIACIONES POR ESCENARIO:
 - hackathon: reto = "diferenciate técnicamente"
-- thesis: reto = "defendé el aporte único de tu investigación"
+- thesis: reto = "defiende el aporte único de tu investigación"
 - investor: reto = "explica por qué invertir en ti y no en ellos"
 ```
 
@@ -58,7 +58,7 @@ DESCRIPCIÓN DEL COMPETIDOR (de Tavily): {competitorDescription}
 PITCH DEL USUARIO: {pitchSummary}
 ESCENARIO: {scenario}
 
-Generá el mensaje dramático para el overlay.
+Genera el mensaje dramático para el overlay.
 ```
 
 ## Ejemplos
@@ -110,7 +110,7 @@ Generá el mensaje dramático para el overlay.
 {
   "headline": "Publicación reciente cubre tu tema",
   "body": "Un grupo publicó en Nature Communications un estudio similar al tuyo esta semana. Su metodología parece más robusta con muestra mayor.",
-  "callToAction": "Defendé el aporte único de tu tesis"
+  "callToAction": "Defiende el aporte único de tu tesis"
 }
 ```
 

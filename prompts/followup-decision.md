@@ -60,7 +60,7 @@ Respuesta del usuario: "{userResponse}"
 
 Número de follow-ups previos sobre este tema: {followUpCount}
 
-Decidí si el jurado debe hacer follow-up o pasar al siguiente tema.
+Decide si el jurado debe hacer follow-up o pasar al siguiente tema.
 ```
 
 ## Ejemplos

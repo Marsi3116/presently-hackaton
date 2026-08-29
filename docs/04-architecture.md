@@ -209,7 +209,7 @@ Total round-trip esperado (usuario termina de hablar → jurado empieza a hablar
 ## Estrategia de tolerancia a fallos
 
 - **LLM cae** → fallback a otro provider (Claude → OpenAI o viceversa)
-- **Vapi cae** → mensaje "sistema de voz no disponible, intentá más tarde" + botón retry
+- **Vapi cae** → mensaje "sistema de voz no disponible, intenta más tarde" + botón retry
 - **Tavily cae** → competidor hardcodeado del escenario (Yoodli para presentaciones, ChatGPT para AI, etc.)
 - **ElevenLabs cae** → fallback a Vapi default voices (menos épico pero funciona)
 - **Convex cae** → dead in the water, pero es sponsor y no debería
